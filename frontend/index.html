@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>GRAYKO | Інтернет-магазин дитячих іграшок в Україні</title>
+  <meta name="description" content="Великий асортимент дитячих іграшок: машинки на радіокеруванні, ляльки, конструктори, набори для творчості, настільні ігри, дерев'яні та розвиваючі іграшки. Швидка доставка Новою Поштою.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/index.css">
+  <link rel="stylesheet" href="/css/components.css">
+</head>
+<body>
+  <!-- Top Notification Bar -->
+  <div class="top-banner">
+    <div class="container banner-inner">
+      <span>🚚 Швидка доставка дитячих іграшок по всій Україні Новою Поштою</span>
+      <div class="banner-links">
+        <a href="#delivery" onclick="window.app.openDeliveryModal()">Умови доставки та оплати</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header id="main-header" class="site-header"></header>
+
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="container hero-grid">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="badge-icon">🧸</span> Усі види іграшок для дітей від 0 до 16+ років
+        </div>
+        <h1 class="hero-title">
+          Світ дитячих іграшок для <span class="gradient-text">радості, гри та розвитку</span>
+        </h1>
+        <p class="hero-subtitle">
+          Машинки на радіокеруванні, ляльки, сюжетно-рольові кухні, конструктори, творчі набори, самокати, настільні ігри та розвиваючі іграшки для будь-якого віку.
+        </p>
+        
+        <!-- Age Quick-Pills Filter -->
+        <div class="hero-age-picker">
+          <span class="picker-label">Підбір за віком дитини:</span>
+          <div class="age-pills-list">
+            <button class="age-pill" data-age="0-1 рік">0–1 рік</button>
+            <button class="age-pill" data-age="1-3 роки">1–3 роки</button>
+            <button class="age-pill" data-age="3-5 років">3–5 років</button>
+            <button class="age-pill" data-age="6-8 років">6–8 років</button>
+            <button class="age-pill" data-age="9-12 років">9–12 років</button>
+            <button class="age-pill" data-age="14+">14+ років</button>
+          </div>
+        </div>
+
+        <div class="hero-actions">
+          <a href="#catalog" class="btn btn-primary btn-lg" onclick="document.getElementById('catalog').scrollIntoView({behavior: 'smooth'})">
+            Всі іграшки каталогу 🚀
+          </a>
+          <button class="btn btn-glass btn-lg" onclick="window.app.filterByBestsellers()">
+            ⭐ Топ-хіти продажів
+          </button>
+        </div>
+      </div>
+
+      <div class="hero-showcase">
+        <div class="showcase-card showcase-main">
+          <div class="showcase-tag">Хіт сезону</div>
+          <img src="https://images.unsplash.com/photo-1594787318286-3d835c1d207f?auto=format&fit=crop&w=800&q=80" alt="Всюдихід на радіокеруванні" class="showcase-img">
+          <div class="showcase-info">
+            <span class="showcase-brand">SULONG TOYS</span>
+            <h3>Всюдихід 4WD «Stunt Climber»</h3>
+            <div class="showcase-meta">
+              <span class="spec-chip">🎮 Сенсорний браслет</span>
+              <span class="spec-chip">💨 З парою</span>
+              <span class="spec-price">999 грн</span>
+            </div>
+          </div>
+        </div>
+        <div class="floating-badge badge-top-right">
+          <span class="floating-icon">🛡️</span>
+          <div>
+            <strong>100% Безпека</strong>
+            <small>Сертифіковані іграшки</small>
+          </div>
+        </div>
+        <div class="floating-badge badge-bottom-left">
+          <span class="floating-icon">📦</span>
+          <div>
+            <strong>Щоденна відправка</strong>
+            <small>Нова Пошта 1-2 дні</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Categories Horizontal Bar -->
+  <section class="categories-bar-section">
+    <div class="container">
+      <div id="category-pills" class="categories-scroll-wrapper"></div>
+    </div>
+  </section>
+
+  <!-- Main Storefront Catalog Section -->
+  <main id="catalog" class="catalog-section">
+    <div class="container">
+      <!-- Section Header with active filter tags and sorting -->
+      <div class="catalog-top-bar">
+        <div>
+          <h2 class="section-title">Каталог дитячих іграшок</h2>
+          <p id="catalog-count-label" class="text-muted">Завантаження асортименту...</p>
+        </div>
+
+        <div class="catalog-controls">
+          <!-- Mobile Filter Button -->
+          <button id="btn-toggle-mobile-filters" class="btn btn-outline btn-mobile-filter">
+            <span class="icon">⚡</span> Фільтри (<span id="mobile-filter-count">0</span>)
+          </button>
+
+          <!-- Sorting Dropdown -->
+          <div class="sort-wrapper">
+            <label for="sort-select" class="sort-label">Сортування:</label>
+            <select id="sort-select" class="sort-select">
+              <option value="popular">За популярністю</option>
+              <option value="price_asc">Від дешевших до дорожчих</option>
+              <option value="price_desc">Від дорожчих до дешевших</option>
+              <option value="new">Новинки</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Layout: Sidebar Filters + Products Grid -->
+      <div class="catalog-layout">
+        <!-- Faceted Filters Sidebar -->
+        <aside id="filters-sidebar" class="filters-sidebar"></aside>
+
+        <!-- Products Grid Container -->
+        <div class="products-area">
+          <!-- Active Filter Chips -->
+          <div id="active-filter-chips" class="active-chips-container"></div>
+
+          <!-- Product Cards Grid -->
+          <div id="products-grid" class="products-grid">
+            <div class="loader-skeleton">
+              <div class="spinner"></div>
+              <p>Завантажуємо актуальний каталог...</p>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div id="empty-state" class="empty-state hidden">
+            <div class="empty-icon">🔍</div>
+            <h3>За обраними критеріями товарів не знайдено</h3>
+            <p>Спробуйте скинути фільтри або змінити категорію.</p>
+            <button class="btn btn-primary" onclick="window.app.resetFilters()">Скинути всі фільтри</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Value Propositions -->
+  <section class="features-section">
+    <div class="container">
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🧸</div>
+          <h3>Повний асортимент</h3>
+          <p>Від брязкалець для немовлят та інтерактивних ляльок до радіокерованих всюдиходів, сюжетних кухонь і складних 3D моделей.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🛡️</div>
+          <h3>Якість та безпека</h3>
+          <p>Тільки сертифіковані іграшки з безпечних матеріалів, що відповідають європейським стандартам EN-71.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📦</div>
+          <h3>Швидка доставка</h3>
+          <p>Щоденне відвантаження з центрального складу. Надійне пакування та швидка доставка Новою Поштою за 1–2 дні.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💳</div>
+          <h3>Зручна оплата & NovaPay</h3>
+          <p>Онлайн-оплата картою, Apple Pay, Google Pay або післяплата з оглядом при отриманні у відділенні Нової Пошти.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="footer-col brand-col">
+        <div class="logo-footer">
+          <span class="logo-icon">🧸</span>
+          <span class="logo-text">GRAYKO <span>TOYS</span></span>
+        </div>
+        <p class="footer-desc">
+          Сучасний інтернет-магазин дитячих іграшок, інтерактивних розваг, творчості та розвиваючих наборів для дітей різного віку.
+        </p>
+        <div class="footer-legal">
+          ФОП 3 група (КВЕД 47.91, 46.19, 47.65) | м. Київ
+        </div>
+      </div>
+
+      <div class="footer-col">
+        <h4>Категорії каталогу</h4>
+        <ul class="footer-links">
+          <li><a href="#catalog" onclick="window.app.filterByCategory(1)">Машинки та радіокерування</a></li>
+          <li><a href="#catalog" onclick="window.app.filterByCategory(2)">Ляльки та м'які іграшки</a></li>
+          <li><a href="#catalog" onclick="window.app.filterByCategory(3)">Конструктори та 3D-пазли</a></li>
+          <li><a href="#catalog" onclick="window.app.filterByCategory(7)">Творчість та ліплення</a></li>
+          <li><a href="#catalog" onclick="window.app.filterByCategory(8)">Сюжетно-рольові набори</a></li>
+          <li><a href="#catalog" onclick="window.app.filterByCategory(10)">Активні ігри та самокати</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Клієнтам</h4>
+        <ul class="footer-links">
+          <li><a href="#delivery" onclick="window.app.openDeliveryModal()">Умови доставки Новою Поштою</a></li>
+          <li><a href="#policy" onclick="window.app.openConditionsModal()">Політика конфіденційності</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col contact-col">
+        <h4>Контакти та склади</h4>
+        <p class="contact-item">📞 <a href="tel:+380975150055">+38 (097) 515-00-55</a></p>
+        <p class="contact-item">📍 Склад відвантаження: м. Київ, вул. Алма-Атинська, 35а</p>
+        <div class="work-hours">Пн-Пт: 09:00 - 18:00 (Відвантаження щодня)</div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="container footer-bottom-inner">
+        <p>&copy; 2026 GRAYKO Toys e-Commerce Platform. Усі права захищено.</p>
+        <div class="payment-badges">
+          <span>Mastercard</span>
+          <span>Visa</span>
+          <span>Apple Pay</span>
+          <span>Google Pay</span>
+          <span>NovaPay</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modals & Drawers Container -->
+  <div id="modal-backdrop" class="modal-backdrop hidden"></div>
+
+  <!-- Cart Drawer -->
+  <div id="cart-drawer" class="cart-drawer"></div>
+
+  <!-- Product Quick View Modal -->
+  <div id="product-modal" class="modal-container hidden"></div>
+
+  <!-- Checkout Multi-Step Modal -->
+  <div id="checkout-modal" class="modal-container hidden"></div>
+
+  <!-- Delivery & FAQ Info Modal -->
+  <div id="info-modal" class="modal-container hidden"></div>
+
+  <!-- Mobile Sticky Bottom Quick-Bar -->
+  <div class="mobile-bottom-bar">
+    <button class="mobile-nav-btn active" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+      <span class="nav-icon">🏠</span>
+      <span>Головна</span>
+    </button>
+    <button class="mobile-nav-btn" onclick="document.getElementById('catalog').scrollIntoView({behavior: 'smooth'})">
+      <span class="nav-icon">🧸</span>
+      <span>Каталог</span>
+    </button>
+    <button class="mobile-nav-btn cart-btn" onclick="window.app.openCart()">
+      <span class="nav-icon">🛒</span>
+      <span>Кошик</span>
+      <span class="mobile-cart-badge cart-count-badge">0</span>
+    </button>
+  </div>
+
+  <!-- App Scripts -->
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

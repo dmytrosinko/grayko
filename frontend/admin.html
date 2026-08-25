@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GRAYKO | Панель адміністрування та дропшипінгу</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/index.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <style>
+    body { background: #0B132B; color: #E2E8F0; }
+    .admin-wrapper { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+    .admin-header-card { background: #1C2541; border: 1px solid #3A506B; border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    .admin-content-card { background: #1C2541; border: 1px solid #3A506B; border-radius: 16px; padding: 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    .admin-stat-card { background: #0B132B; border-color: #3A506B; }
+    .admin-stat-card .stat-val { color: #5BC0BE; }
+    .admin-tabs { border-bottom-color: #3A506B; }
+    .admin-tab-btn { color: #94A3B8; }
+    .admin-tab-btn.active { color: #5BC0BE; border-color: #5BC0BE; }
+    .admin-table th { background: #0B132B; color: #94A3B8; }
+    .admin-table td { border-bottom-color: #3A506B; color: #E2E8F0; }
+    .form-input, .form-select { background: #0B132B; border-color: #3A506B; color: #E2E8F0; }
+    .btn-admin-primary { background: #5BC0BE; color: #0B132B; font-weight: 700; }
+    .btn-admin-primary:hover { background: #48A9A6; color: white; }
+    .nav-brand-title { font-size: 22px; font-weight: 800; font-family: 'Outfit', sans-serif; color: white; }
+    .nav-brand-title span { color: #FF5A5F; }
+  </style>
+</head>
+<body>
+  <div class="admin-wrapper">
+    <!-- Top Header -->
+    <div class="admin-header-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="font-size: 32px;">⚙️</div>
+          <div>
+            <div class="nav-brand-title">GRAYKO <span>ADMIN</span></div>
+            <p style="font-size: 13px; color: #94A3B8; margin-top: 2px;">
+              Система управління каталогом, фідами постачальника, контролем РРЦ та відправленнями
+            </p>
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <a href="/" class="btn btn-outline" style="border-color: #3A506B; color: #E2E8F0;">← До вітрини магазину</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Content -->
+    <div class="admin-content-card">
+      <!-- Top Metrics -->
+      <div class="admin-stat-cards" id="admin-stats-container">
+        <div class="admin-stat-card">
+          <span style="font-size: 12px; color: #94A3B8; font-weight: 700;">ДЕПОЗИТ ПОСТАЧАЛЬНИКА</span>
+          <div class="stat-val" id="stat-deposit">-- грн</div>
+          <small style="color: #10B981;">✓ Активний ліміт</small>
+        </div>
+        <div class="admin-stat-card">
+          <span style="font-size: 12px; color: #94A3B8; font-weight: 700;">ТОВАРІВ В КАТАЛОЗІ</span>
+          <div class="stat-val" id="stat-products">--</div>
+          <small style="color: #94A3B8;">Синхронізовано з YML</small>
+        </div>
+        <div class="admin-stat-card">
+          <span style="font-size: 12px; color: #94A3B8; font-weight: 700;">ЗАМОВЛЕНЬ</span>
+          <div class="stat-val" id="stat-orders">--</div>
+          <small style="color: #94A3B8;">Виручка: <span id="stat-revenue">--</span> грн</small>
+        </div>
+        <div class="admin-stat-card">
+          <span style="font-size: 12px; color: #94A3B8; font-weight: 700;">СКЛАДИ ВІДВАНТАЖЕННЯ</span>
+          <div class="stat-val" id="stat-suppliers">--</div>
+          <small style="color: #94A3B8;">Київ, Бердичів</small>
+        </div>
+      </div>
+
+      <!-- Tabs Navigation -->
+      <div class="admin-tabs">
+        <button class="admin-tab-btn active" id="tab-btn-sync" onclick="switchTab('sync')">🔄 Синхронізація XML/YML</button>
+        <button class="admin-tab-btn" id="tab-btn-rrp" onclick="switchTab('rrp')">🛡️ Контроль цін (РРЦ)</button>
+        <button class="admin-tab-btn" id="tab-btn-orders" onclick="switchTab('orders')">📦 Замовлення та ТТН</button>
+      </div>
+
+      <!-- TAB 1: SYNC -->
+      <div id="tab-content-sync" class="admin-tab-pane">
+        <div style="background: #0B132B; border: 1px solid #3A506B; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+          <h4 style="font-size: 16px; margin-bottom: 8px; color: white;">Керування потоковою синхронізацією B2B фіду</h4>
+          <p style="font-size: 13px; color: #94A3B8; margin-bottom: 18px; line-height: 1.5;">
+            Швидка синхронізація (Fast Sync) оновлює залишки та ціни раз на 1–2 години з автоматичною валідацією РРЦ. Повна синхронізація (Full Sync) оновлює описи, фото та характеристики.
+          </p>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <button id="btn-fast-sync" class="btn btn-admin-primary" onclick="triggerSync('FAST')">
+              ⚡ Запустити Fast Sync (Залишки та РРЦ)
+            </button>
+            <button id="btn-full-sync" class="btn btn-glass" style="border-color:#3A506B; color:#E2E8F0;" onclick="triggerSync('FULL')">
+              🌙 Запустити Full Sync (Повний каталог)
+            </button>
+            <button class="btn btn-outline" style="border-color:#3A506B; color:#94A3B8;" onclick="window.open('/data/b2b_feed.xml', '_blank')">
+              📄 Переглянути згенерований XML фід
+            </button>
+          </div>
+          <div id="sync-result-box" style="margin-top: 14px; font-size: 13px;"></div>
+        </div>
+
+        <h4 style="font-size: 15px; margin-bottom: 12px; color: white;">Історія останніх синхронізацій:</h4>
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Тип</th>
+              <th>Статус</th>
+              <th>Опрацьовано</th>
+              <th>Коригувань РРЦ</th>
+              <th>Час</th>
+            </tr>
+          </thead>
+          <tbody id="sync-logs-tbody">
+            <tr><td colspan="6" style="text-align: center; color: #94A3B8;">Завантаження журналу...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TAB 2: RRP ENFORCEMENT -->
+      <div id="tab-content-rrp" class="admin-tab-pane hidden">
+        <div style="background: rgba(255, 90, 95, 0.1); border: 1px solid rgba(255, 90, 95, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+          <h4 style="color: #FFA5A8; font-size: 14px; margin-bottom: 4px;">🛡️ Правило обов'язкового дотримання РРЦ (RRP Enforcement Rule)</h4>
+          <p style="font-size: 13px; color: #CBD5E1;">
+            Магазин зобов'язаний дотримуватися рекомендованих роздрібних цін (РРЦ). Валідація відбувається на рівні бекенду: спроба зберегти ціну нижчу за РРЦ блокується з помилкою 400.
+          </p>
+        </div>
+
+        <h4 style="font-size: 15px; margin-bottom: 12px; color: white;">Тестування захисту від демпінгу цін:</h4>
+        <div style="background: #0B132B; padding: 20px; border-radius: 12px; border: 1px solid #3A506B; margin-bottom: 20px;">
+          <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 12px; align-items: end;">
+            <div>
+              <label class="form-label" style="color:#94A3B8;">Оберіть товар для перевірки:</label>
+              <select id="rrp-test-product" class="form-select"></select>
+            </div>
+            <div>
+              <label class="form-label" style="color:#94A3B8;">Рекомендована РРЦ:</label>
+              <input type="text" id="rrp-target-val" class="form-input" readonly style="background:#1C2541;">
+            </div>
+            <div>
+              <label class="form-label" style="color:#94A3B8;">Нова ціна продажу:</label>
+              <input type="number" id="rrp-new-price" class="form-input" placeholder="Ціна в грн">
+            </div>
+            <button class="btn btn-admin-primary" onclick="testPriceUpdate()">Зберегти ціну</button>
+          </div>
+          <div id="rrp-feedback" style="margin-top: 14px; font-size: 13px;"></div>
+        </div>
+      </div>
+
+      <!-- TAB 3: ORDERS & TTN DISPATCHER -->
+      <div id="tab-content-orders" class="admin-tab-pane hidden">
+        <h4 style="font-size: 15px; margin-bottom: 12px; color: white;">Журнал замовлень клієнтів та сформовані ТТН Нової Пошти:</h4>
+        <div id="orders-list-container">
+          <div style="text-align:center; padding: 20px; color: #94A3B8;">Завантаження замовлень...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/admin.js" type="module"></script>
+</body>
+</html>

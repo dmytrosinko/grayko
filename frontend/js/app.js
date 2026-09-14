@@ -31,6 +31,8 @@ class ToysApp {
     state.on('filters_changed', () => {
       this.loadProducts();
       renderActiveFilterChips();
+      renderCategoryPills(state.categories);
+      this.syncHeroAgePills();
     });
     state.on('cart_updated', () => {
       const drawer = document.getElementById('cart-drawer');
@@ -40,6 +42,14 @@ class ToysApp {
     });
 
     this.bindEvents();
+  }
+
+  syncHeroAgePills() {
+    const activeAges = state.filters.age_groups || [];
+    document.querySelectorAll('.age-pill').forEach(btn => {
+      const age = btn.dataset.age;
+      btn.classList.toggle('active', activeAges.includes(age));
+    });
   }
 
   async loadCategories() {
@@ -111,19 +121,19 @@ class ToysApp {
     // Age pills in Hero section
     document.querySelectorAll('.age-pill').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const age = e.target.dataset.age;
-        const isActive = e.target.classList.contains('active');
+        const age = e.currentTarget.dataset.age;
+        const isCurrentOnlyAge = state.filters.age_groups.length === 1 && state.filters.age_groups[0] === age;
 
-        document.querySelectorAll('.age-pill').forEach(b => b.classList.remove('active'));
-
-        if (isActive) {
-          state.toggleArrayFilter('age_groups', age);
+        if (isCurrentOnlyAge) {
+          // If already selected, reset/toggle off
+          state.setFilter('age_groups', []);
         } else {
-          e.target.classList.add('active');
-          state.toggleArrayFilter('age_groups', age);
+          // Reset other age filters and set only the clicked age
+          state.setFilter('age_groups', [age]);
         }
 
-        document.getElementById('catalog').scrollIntoView({ behavior: 'smooth' });
+        const catalog = document.getElementById('catalog');
+        if (catalog) catalog.scrollIntoView({ behavior: 'smooth' });
       });
     });
 
@@ -160,11 +170,12 @@ class ToysApp {
     document.getElementById('catalog').scrollIntoView({ behavior: 'smooth' });
   }
 
+  clearSkillFilter() {
+    state.setFilter('skill', null);
+  }
+
   resetFilters() {
     state.resetFilters();
-    renderCategoryPills(state.categories);
-    renderActiveFilterChips();
-    document.querySelectorAll('.age-pill').forEach(b => b.classList.remove('active'));
   }
 
   openProductModal(productId) {

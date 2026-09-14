@@ -23,6 +23,10 @@ class AppState {
     this.listeners = new Map();
   }
 
+  setCategories(categories) {
+    this.categories = categories;
+  }
+
   loadCart() {
     try {
       return JSON.parse(localStorage.getItem('grayko_cart') || '[]');

@@ -52,7 +52,7 @@ export async function openCheckoutModal() {
       <form id="checkout-form">
         <!-- 1. Контактні дані -->
         <h4 style="font-size: 15px; margin-bottom: 12px; color: #0F172A;">1. Контактні дані одержувача</h4>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+        <div class="form-row-2col">
           <div class="form-group">
             <label class="form-label">Прізвище та Ім'я *</label>
             <input type="text" id="chk-name" class="form-input" placeholder="Коваленко Олена" required>
@@ -70,7 +70,7 @@ export async function openCheckoutModal() {
 
         <!-- 2. Доставка Новою Поштою -->
         <h4 style="font-size: 15px; margin: 20px 0 12px; color: #0F172A;">2. Доставка Нова Пошта</h4>
-        <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 12px; margin-bottom: 16px;">
+        <div class="form-row-2col">
           <div class="form-group">
             <label class="form-label">Місто одержання *</label>
             <select id="chk-city" class="form-select">

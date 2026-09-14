@@ -30,7 +30,10 @@ export function renderFiltersSidebar(facets = {}) {
   sidebar.innerHTML = `
     <div class="filter-header-row">
       <h3>Фільтри</h3>
-      <button class="btn-reset-filters" onclick="window.app.resetFilters()">Скинути</button>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <button class="btn-reset-filters" onclick="window.app.resetFilters()">Скинути</button>
+        <button class="mobile-filter-close-btn" onclick="document.getElementById('filters-sidebar').classList.remove('mobile-open'); document.getElementById('modal-backdrop').classList.add('hidden');" aria-label="Закрити фільтри">✕</button>
+      </div>
     </div>
 
     <!-- In Stock Only -->
@@ -115,6 +118,12 @@ export function renderFiltersSidebar(facets = {}) {
         <input type="number" id="price-max" class="price-field" placeholder="${max_price}" value="${state.filters.max_price || ''}">
       </div>
       <button class="btn btn-outline btn-sm btn-block" style="margin-top: 10px;" id="btn-apply-price">Застосувати ціну</button>
+    </div>
+
+    <div class="mobile-filter-apply-wrapper">
+      <button class="btn btn-primary btn-block" onclick="document.getElementById('filters-sidebar').classList.remove('mobile-open'); document.getElementById('modal-backdrop').classList.add('hidden');">
+        Показати результати ✨
+      </button>
     </div>
   `;
 

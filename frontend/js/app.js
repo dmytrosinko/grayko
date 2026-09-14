@@ -138,9 +138,13 @@ class ToysApp {
     // Mobile filter toggle
     const mobileFilterBtn = document.getElementById('btn-toggle-mobile-filters');
     const sidebar = document.getElementById('filters-sidebar');
+    const backdrop = document.getElementById('modal-backdrop');
     if (mobileFilterBtn && sidebar) {
       mobileFilterBtn.addEventListener('click', () => {
-        sidebar.classList.toggle('mobile-open');
+        const isOpen = sidebar.classList.toggle('mobile-open');
+        if (backdrop) {
+          backdrop.classList.toggle('hidden', !isOpen);
+        }
       });
     }
   }

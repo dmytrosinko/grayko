@@ -866,11 +866,15 @@ img {
   font-family: var(--font-heading);
   font-size: 20px;
   font-weight: 800;
-  color: white;
+  color: #FFFFFF;
   margin-bottom: 16px;
 }
 
-.logo-footer span span {
+.logo-footer .logo-text {
+  color: #FFFFFF;
+}
+
+.logo-footer .logo-text span {
   color: var(--primary);
 }
 

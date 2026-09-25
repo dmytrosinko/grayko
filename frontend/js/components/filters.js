@@ -12,9 +12,12 @@ export function renderCategoryPills(categories = []) {
     </button>
   `;
 
-  const pillsHtml = categories.map(cat => `
+  // Show top-level root categories in navigation pills
+  const rootCategories = categories.filter(cat => !cat.parent_id);
+
+  const pillsHtml = rootCategories.map(cat => `
     <button class="category-nav-pill ${currentCat == cat.id ? 'active' : ''}" onclick="window.app.filterByCategory(${cat.id})">
-      <span>${cat.icon}</span> ${cat.name_uk}
+      <span>${cat.icon || '📦'}</span> ${cat.name_uk}
     </button>
   `).join('');
 

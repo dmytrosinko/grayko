@@ -50,7 +50,12 @@ export async function renderCartDrawer() {
             </span>
           ` : ''}
         </div>
-        <button class="btn-close-drawer" onclick="window.app.closeCart()">✕</button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button class="btn-clear-cart" onclick="window.app.clearCart()" title="Видалити всі товари з кошика" aria-label="Очистити кошик">
+            🗑️ <span>Очистити</span>
+          </button>
+          <button class="btn-close-drawer" onclick="window.app.closeCart()" aria-label="Закрити кошик">✕</button>
+        </div>
       </div>
 
       <div class="drawer-body">
@@ -73,10 +78,15 @@ export async function renderCartDrawer() {
                     <div style="font-size: 11px; color: #64748B;">Арт: ${it.sku}</div>
                     <div class="cart-item-price">${it.price} грн</div>
                   </div>
-                  <div class="qty-control">
-                    <button class="qty-btn" onclick="window.app.updateCartQty(${it.product_id}, -1)">-</button>
-                    <span class="qty-val">${it.quantity}</span>
-                    <button class="qty-btn" onclick="window.app.updateCartQty(${it.product_id}, 1)">+</button>
+                  <div class="cart-item-actions">
+                    <div class="qty-control">
+                      <button class="qty-btn" onclick="window.app.updateCartQty(${it.product_id}, -1)" title="Зменшити кількість">-</button>
+                      <span class="qty-val">${it.quantity}</span>
+                      <button class="qty-btn" onclick="window.app.updateCartQty(${it.product_id}, 1)" title="Збільшити кількість">+</button>
+                    </div>
+                    <button class="btn-remove-item" onclick="window.app.removeFromCart(${it.product_id})" title="Видалити цей товар з кошика" aria-label="Видалити товар">
+                      🗑️
+                    </button>
                   </div>
                 </div>
               `).join('')}
@@ -119,6 +129,10 @@ export async function renderCartDrawer() {
 
         <button class="btn btn-primary btn-block btn-lg" style="margin-top: 16px;" onclick="window.app.openCheckout()">
           Оформити замовлення 🚀
+        </button>
+
+        <button class="btn-link-danger" onclick="window.app.clearCart()">
+          🗑️ Очистити весь кошик
         </button>
       </div>
     `;

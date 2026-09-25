@@ -9,6 +9,8 @@ import { openCheckoutModal } from './components/checkoutModal.js';
 
 class ToysApp {
   constructor() {
+    this.pagination = { limit: 48, offset: 0, total: 0, hasMore: false };
+    this.isLoadingMore = false;
     this.init();
   }
 
@@ -29,7 +31,8 @@ class ToysApp {
 
     // Listen to reactive state changes
     state.on('filters_changed', () => {
-      this.loadProducts();
+      this.pagination.offset = 0;
+      this.loadProducts(false);
       renderActiveFilterChips();
       renderCategoryPills(state.categories);
       this.syncHeroAgePills();
@@ -62,17 +65,23 @@ class ToysApp {
     }
   }
 
-  async loadProducts() {
+  async loadProducts(append = false) {
     const grid = document.getElementById('products-grid');
     const emptyState = document.getElementById('empty-state');
     const countLabel = document.getElementById('catalog-count-label');
+    const pagContainer = document.getElementById('pagination-container');
+    const pagInfo = document.getElementById('pagination-info');
 
-    grid.innerHTML = `
-      <div class="loader-skeleton">
-        <div class="spinner"></div>
-        <p style="margin-top: 10px; color: #64748B;">Завантажуємо актуальні товари...</p>
-      </div>
-    `;
+    if (!append) {
+      this.pagination.offset = 0;
+      grid.innerHTML = `
+        <div class="loader-skeleton">
+          <div class="spinner"></div>
+          <p style="margin-top: 10px; color: #64748B;">Завантажуємо актуальні товари...</p>
+        </div>
+      `;
+      if (pagContainer) pagContainer.style.display = 'none';
+    }
     emptyState.classList.add('hidden');
 
     try {
@@ -88,36 +97,89 @@ class ToysApp {
         in_stock: state.filters.in_stock ? 1 : null,
         is_bestseller: state.filters.is_bestseller,
         is_new: state.filters.is_new,
-        sort: state.filters.sort
+        sort: state.filters.sort,
+        limit: this.pagination.limit,
+        offset: this.pagination.offset
       };
 
       const data = await api.getCatalog(params);
       const products = data.products || [];
 
-      state.facets = data.facets || {};
-      renderFiltersSidebar(state.facets);
+      this.pagination.total = data.total != null ? data.total : products.length;
+      this.pagination.hasMore = data.has_more != null ? data.has_more : ((this.pagination.offset + products.length) < this.pagination.total);
 
-      if (countLabel) {
-        countLabel.textContent = `Знайдено: ${products.length} товарів`;
+      if (!append) {
+        state.facets = data.facets || {};
+        renderFiltersSidebar(state.facets);
       }
 
-      if (!products.length) {
+      if (countLabel) {
+        countLabel.textContent = `Знайдено: ${this.pagination.total.toLocaleString('uk-UA')} товарів`;
+      }
+
+      if (!append && !products.length) {
         grid.innerHTML = '';
         emptyState.classList.remove('hidden');
+        if (pagContainer) pagContainer.style.display = 'none';
         return;
       }
 
-      grid.innerHTML = '';
+      if (!append) {
+        grid.innerHTML = '';
+      }
+
       products.forEach(prod => {
         const card = createProductCard(prod);
         grid.appendChild(card);
       });
+
+      // Update Pagination UI
+      if (pagContainer) {
+        if (this.pagination.hasMore) {
+          pagContainer.style.display = 'block';
+          const displayedCount = Math.min(this.pagination.offset + products.length, this.pagination.total);
+          if (pagInfo) {
+            pagInfo.textContent = `Показано ${displayedCount.toLocaleString('uk-UA')} з ${this.pagination.total.toLocaleString('uk-UA')} товарів`;
+          }
+        } else {
+          pagContainer.style.display = 'none';
+        }
+      }
     } catch (err) {
-      grid.innerHTML = `<div style="color: #DC2626; padding: 20px;">Помилка завантаження каталогу: ${err.message}</div>`;
+      if (!append) {
+        grid.innerHTML = `<div style="color: #DC2626; padding: 20px;">Помилка завантаження каталогу: ${err.message}</div>`;
+      }
+      console.error("Load products error:", err);
     }
   }
 
+  async loadMoreProducts() {
+    if (this.isLoadingMore || !this.pagination.hasMore) return;
+    this.isLoadingMore = true;
+
+    const loadMoreBtn = document.getElementById('btn-load-more');
+    if (loadMoreBtn) {
+      loadMoreBtn.textContent = '⏳ Завантаження...';
+      loadMoreBtn.disabled = true;
+    }
+
+    this.pagination.offset += this.pagination.limit;
+    await this.loadProducts(true);
+
+    if (loadMoreBtn) {
+      loadMoreBtn.textContent = 'Завантажити ще товари ▾';
+      loadMoreBtn.disabled = false;
+    }
+    this.isLoadingMore = false;
+  }
+
   bindEvents() {
+    // Load More button
+    const loadMoreBtn = document.getElementById('btn-load-more');
+    if (loadMoreBtn) {
+      loadMoreBtn.addEventListener('click', () => this.loadMoreProducts());
+    }
+
     // Age pills in Hero section
     document.querySelectorAll('.age-pill').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -225,6 +287,16 @@ class ToysApp {
     state.updateCartQty(productId, delta);
   }
 
+  removeFromCart(productId) {
+    state.removeFromCart(productId);
+  }
+
+  clearCart() {
+    if (confirm("Ви впевнені, що хочете видалити всі товари та очистити кошик?")) {
+      state.clearCart();
+    }
+  }
+
   openCart() {
     const drawer = document.getElementById('cart-drawer');
     const backdrop = document.getElementById('modal-backdrop');
@@ -283,10 +355,10 @@ class ToysApp {
         <p>Відправлення здійснюється щодня з центрального складу (м. Київ) та партнерських складів через Нову Пошту у відділення, поштомати або кур'єром.</p>
         <p>Термін доставки: <strong>1–2 дні</strong> по всій Україні.</p>
 
-        <h4 style="color: #0F172A; margin: 16px 0 6px;">2. Способи оплати</h4>
+        <h4 style="color: #0F172A; margin: 16px 0 6px;">2. Способи оплати (передоплата)</h4>
         <ul>
-          <li><strong>Онлайн-оплата:</strong> Карткою Visa/Mastercard, Apple Pay, Google Pay без жодних комісій.</li>
-          <li><strong>Післяплата (NovaPay):</strong> Оплата готівкою або карткою при огляді товару у відділенні Нової Пошти.</li>
+          <li><strong>Онлайн-оплата:</strong> Карткою Visa / Mastercard, Apple Pay, Google Pay без жодних додаткових комісій.</li>
+          <li><strong>Умови:</strong> Відправка замовлень здійснюється за 100% передоплатою. Миттєве зарахування та формування офіційного фіскального чека.</li>
         </ul>
 
         <h4 style="color: #0F172A; margin: 16px 0 6px;">3. Гарантія та повернення</h4>

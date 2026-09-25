@@ -66,18 +66,24 @@ class AppState {
     item.quantity += delta;
     if (item.quantity <= 0) {
       this.cart = this.cart.filter(i => i.product_id !== productId);
+      this.showToast(`Видалено з кошика: ${item.title}`);
     }
     this.saveCart();
   }
 
   removeFromCart(productId) {
+    const item = this.cart.find(i => i.product_id === productId);
     this.cart = this.cart.filter(i => i.product_id !== productId);
     this.saveCart();
+    if (item) {
+      this.showToast(`Видалено з кошика: ${item.title}`);
+    }
   }
 
   clearCart() {
     this.cart = [];
     this.saveCart();
+    this.showToast('Кошик успішно очищено');
   }
 
   getCartCount() {
@@ -146,7 +152,7 @@ class AppState {
         font-weight: 600;
         font-size: 14px;
         box-shadow: 0 10px 25px rgba(0,0,0,0.25);
-        z-index: 9999;
+        z-index: 10010;
         display: flex;
         align-items: center;
         gap: 8px;

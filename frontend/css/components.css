@@ -525,6 +525,12 @@
   color: var(--primary);
 }
 
+.cart-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .qty-control {
   display: flex;
   align-items: center;
@@ -539,6 +545,13 @@
   font-size: 14px;
   padding: 0 4px;
   color: var(--text-primary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.qty-btn:hover {
+  color: var(--primary);
 }
 
 .qty-val {
@@ -546,6 +559,67 @@
   font-weight: 700;
   min-width: 16px;
   text-align: center;
+}
+
+.btn-remove-item {
+  background: transparent;
+  border: none;
+  color: #94A3B8;
+  cursor: pointer;
+  padding: 6px;
+  font-size: 15px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.btn-remove-item:hover {
+  background: #FEE2E2;
+  color: #EF4444;
+  transform: scale(1.1);
+}
+
+.btn-clear-cart {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  color: #EF4444;
+  border: 1px solid #FECACA;
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-clear-cart:hover {
+  background: #FEE2E2;
+  color: #DC2626;
+  border-color: #EF4444;
+}
+
+.btn-link-danger {
+  display: block;
+  width: 100%;
+  text-align: center;
+  margin-top: 10px;
+  font-size: 12px;
+  color: #EF4444;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: background var(--transition-fast);
+}
+
+.btn-link-danger:hover {
+  background: #FEE2E2;
+  text-decoration: underline;
 }
 
 .drawer-footer {

@@ -11,11 +11,27 @@ async function initAdmin() {
 async function loadStats() {
   try {
     const stats = await api.getAdminStats();
-    document.getElementById('stat-deposit').textContent = `${stats.total_deposit} грн`;
-    document.getElementById('stat-products').textContent = stats.active_products;
-    document.getElementById('stat-orders').textContent = stats.orders_count;
-    document.getElementById('stat-revenue').textContent = stats.total_revenue;
-    document.getElementById('stat-suppliers').textContent = (stats.suppliers || []).length;
+    if (document.getElementById('stat-products')) {
+      document.getElementById('stat-products').textContent = (stats.total_products || stats.active_products || 0).toLocaleString('uk-UA');
+    }
+    if (document.getElementById('stat-in-stock')) {
+      document.getElementById('stat-in-stock').textContent = (stats.in_stock_products || stats.active_products || 0).toLocaleString('uk-UA');
+    }
+    if (document.getElementById('stat-categories')) {
+      document.getElementById('stat-categories').textContent = (stats.total_categories || 203);
+    }
+    if (document.getElementById('stat-next-sync')) {
+      document.getElementById('stat-next-sync').textContent = stats.next_sync_time || 'Через 4 години';
+    }
+    if (document.getElementById('stat-orders')) {
+      document.getElementById('stat-orders').textContent = stats.orders_count || 0;
+    }
+    if (document.getElementById('stat-revenue')) {
+      document.getElementById('stat-revenue').textContent = (stats.total_revenue || 0).toLocaleString('uk-UA');
+    }
+    if (document.getElementById('feed-url-display')) {
+      document.getElementById('feed-url-display').textContent = stats.feed_url || 'https://toysi.ua/feed-products-residue.php?...';
+    }
 
     const tbody = document.getElementById('sync-logs-tbody');
     if (tbody) {
@@ -27,7 +43,7 @@ async function loadStats() {
             <td>#${log.id}</td>
             <td><span style="font-weight:700; background:rgba(91, 192, 190, 0.2); color:#5BC0BE; padding:2px 8px; border-radius:4px; font-size:11px;">${log.sync_type}</span></td>
             <td><span style="color:#10B981; font-weight:700;">✓ ${log.status}</span></td>
-            <td>${log.items_processed} тов.</td>
+            <td>${(log.items_processed || 0).toLocaleString('uk-UA')} тов. (оновлено: ${log.items_updated || 0}, додано: ${log.items_added || 0})</td>
             <td>${log.rrp_violations_count || 0}</td>
             <td style="color:#94A3B8; font-size:12px;">${log.created_at}</td>
           </tr>
@@ -90,12 +106,50 @@ async function loadOrders() {
             </div>
           `).join('')}
         </div>
+
+        <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid #3A506B; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            ${o.payment_status !== 'PAID' ? `
+              <button class="btn btn-sm btn-admin-primary" onclick="sendOrderToToysi(${o.id}, false)">
+                🤖 Оплачено — Створити в Toysi (API)
+              </button>
+              <button class="btn btn-sm btn-outline" style="border-color:#3A506B; color:#CBD5E1;" onclick="sendOrderToToysi(${o.id}, true)">
+                🧪 Тестовий запит в Toysi
+              </button>
+            ` : `
+              <span style="color: #10B981; font-size: 13px; font-weight: 700;">✓ Оплачено та передано на відвантаження</span>
+            `}
+          </div>
+          <span style="font-size: 12px; color: #94A3B8;">ID замовлення: #${o.id}</span>
+        </div>
       </div>
     `).join('');
   } catch (err) {
     container.innerHTML = `<div style="color:#FF5A5F;">Помилка завантаження замовлень</div>`;
   }
 }
+
+window.sendOrderToToysi = async function(orderId, isTest = false) {
+  const modeText = isTest ? "ТЕСТОВИЙ РЕЖИМ (не передається на збірку)" : "РЕАЛЬНЕ ЗАМОВЛЕННЯ на відвантаження";
+  if (!confirm(`Відправити замовлення #${orderId} у систему Toysi (${modeText})?`)) return;
+
+  try {
+    const res = await fetch(`/api/admin/orders/${orderId}/send-to-toysi`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_test: isTest })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✓ Успішно! Замовлення створено в системі Toysi!\nНомер замовлення Toysi: #${data.toysi_order_id}\nСума зі знижкою: ${data.sum_with_discount || '--'} грн`);
+      await loadOrders();
+    } else {
+      alert(`⛔ Помилка Toysi API: ${data.error || 'Не вдалося створити'}`);
+    }
+  } catch (e) {
+    alert(`Помилка підключення: ${e.message}`);
+  }
+};
 
 async function loadProductsForRRP() {
   const prodSelect = document.getElementById('rrp-test-product');
@@ -139,19 +193,29 @@ window.switchTab = function(tabName) {
 
 window.triggerSync = async function(syncType) {
   const box = document.getElementById('sync-result-box');
-  box.innerHTML = `<span style="color:#5BC0BE;">⏳ Виконується ${syncType === 'FAST' ? 'швидка' : 'повна'} синхронізація...</span>`;
+  box.innerHTML = `<span style="color:#5BC0BE;">⏳ Завантажуємо XML фід з toysi.ua та виконуємо ${syncType === 'FAST' ? 'швидку' : 'повну'} синхронізацію... Це може зайняти кілька секунд.</span>`;
 
   try {
     const res = await api.triggerSync(syncType);
-    box.innerHTML = `
-      <div style="background: rgba(16, 185, 129, 0.2); color: #10B981; padding: 10px 14px; border-radius: 8px; font-weight: 600; border: 1px solid rgba(16, 185, 129, 0.3);">
-        ✓ ${syncType === 'FAST' ? 'Швидку синхронізацію' : 'Повну синхронізацію'} успішно завершено! Опрацьовано: ${res.items_processed} товарів.
-      </div>
-    `;
+    if (res && res.success) {
+      box.innerHTML = `
+        <div style="background: rgba(16, 185, 129, 0.2); color: #10B981; padding: 12px 16px; border-radius: 8px; font-weight: 600; border: 1px solid rgba(16, 185, 129, 0.3); line-height: 1.5;">
+          ✓ ${syncType === 'FAST' ? 'Швидку синхронізацію' : 'Повну синхронізацію'} успішно виконано за ${res.duration_seconds || '0.5'} с!<br>
+          <span style="font-size: 12px; color: #CBD5E1;">
+            Опрацьовано у фіді: <b>${(res.items_processed || 0).toLocaleString('uk-UA')}</b> товарів |
+            Оновлено залишків/цін: <b>${res.items_updated || 0}</b> |
+            Додано нових товарів: <b>${res.items_added || 0}</b> |
+            Наступне авто-оновлення за розкладом: <b>${res.next_sync_in || 'кожні 4 години'}</b>.
+          </span>
+        </div>
+      `;
+    } else {
+      box.innerHTML = `<div style="color: #FF5A5F; padding: 10px;">Помилка синхронізації: ${res?.error || 'невідома помилка'}</div>`;
+    }
     await loadStats();
     await loadProductsForRRP();
   } catch (err) {
-    box.innerHTML = `<div style="color: #FF5A5F;">Помилка синхронізації: ${err.message}</div>`;
+    box.innerHTML = `<div style="color: #FF5A5F; padding: 10px;">Помилка синхронізації: ${err.message}</div>`;
   }
 };
 

@@ -4,12 +4,16 @@ __pycache__/
 *$py.class
 *.log
 
-# Environments
+# Environments & Secrets
 .env
+.env.*
+.env.local
 .venv
 env/
-venv/
+env/*
 ENV/
+venv/
+*/env/
 
 # IDE & OS
 .idea/

@@ -170,9 +170,18 @@ def init_db():
     )
     """)
 
+    # 9. Indexes for lightning-fast queries with 17k+ items
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_products_brand ON products(brand);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_products_active ON products(is_active);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_products_price ON products(price);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_products_supplier_sku ON products(supplier_sku);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_products_age ON products(age_group);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_id);")
+
     conn.commit()
     conn.close()
-    print("Database tables initialized successfully.")
+    print("Database tables and indexes initialized successfully.")
 
 if __name__ == '__main__':
     init_db()

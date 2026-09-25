@@ -111,6 +111,8 @@ export const api = {
     if (params.min_price) query.set('min_price', params.min_price);
     if (params.max_price) query.set('max_price', params.max_price);
     if (params.skill) query.set('skill', params.skill);
+    if (params.limit) query.set('limit', params.limit);
+    if (params.offset != null) query.set('offset', params.offset);
 
     if (params.age_groups && params.age_groups.length) {
       params.age_groups.forEach(ag => query.append('age_group', ag));
@@ -411,8 +413,8 @@ export const api = {
         customer_comment: orderData.customer_comment || '',
         delivery_city: orderData.delivery_city || 'Київ',
         delivery_warehouse: orderData.delivery_warehouse || 'Відділення №1',
-        payment_status: orderData.payment_method === 'COD_NOVAPAY' ? 'COD' : 'PAID',
-        payment_method: orderData.payment_method || 'MONOBANK',
+        payment_status: 'PAID',
+        payment_method: 'MONOBANK',
         total_products_amount: orderData.total_products_amount || 0,
         total_shipping_amount: orderData.total_shipping_amount || 0,
         total_amount: orderData.total_amount || 0,

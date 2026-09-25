@@ -88,15 +88,15 @@ export async function openCheckoutModal() {
         <!-- 3. Спосіб оплати -->
         <h4 style="font-size: 15px; margin: 20px 0 12px; color: #0F172A;">3. Спосіб оплати</h4>
         <div class="payment-options-grid" style="margin-bottom: 20px;">
-          <label class="payment-card-option selected">
-            <input type="radio" name="payment_method" value="MONOBANK" checked style="display:none;">
-            <div style="font-weight: 800; font-size: 14px; color: #0F172A;">🖤 Онлайн-оплата (Apple Pay / G-Pay / Карта)</div>
-            <small style="color: #64748B;">Миттєва безпечна онлайн-оплата без комісії</small>
-          </label>
-          <label class="payment-card-option">
-            <input type="radio" name="payment_method" value="COD_NOVAPAY" style="display:none;">
-            <div style="font-weight: 800; font-size: 14px; color: #0F172A;">📦 Післяплата (NovaPay)</div>
-            <small style="color: #64748B;">Оплата при отриманні у відділенні Нової Пошти</small>
+          <label class="payment-card-option selected" style="cursor: default;">
+            <input type="radio" name="payment_method" value="IBAN_REQUISITES" checked style="display:none;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+              <div style="font-weight: 800; font-size: 14px; color: #0F172A;">📋 Оплата за реквізитами (IBAN / картка після узгодження)</div>
+              <span style="background: #ECFDF5; color: #059669; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px;">Передоплата</span>
+            </div>
+            <small style="color: #64748B; display: block; line-height: 1.4;">
+              Менеджер зв'яжеться з вами у Viber / Telegram або за телефоном та надішле офіційні банківські реквізити для оплати після перевірки наявності.
+            </small>
           </label>
         </div>
 
@@ -196,10 +196,13 @@ function renderOrderSuccessModal(orderRes, container) {
 
     <div class="modal-body" style="text-align: center; padding: 32px 20px;">
       <div style="font-size: 54px; margin-bottom: 12px;">📦✨</div>
-      <h3 style="font-size: 22px; margin-bottom: 8px;">Дякуємо за покупку в GRAYKO Toys!</h3>
-      <p style="color: #475569; max-width: 480px; margin: 0 auto 24px; font-size: 14px;">
-        Ваше замовлення передано на комплектацію. Електронний чек <strong>${orderRes.fiscal_receipt_id}</strong> сформовано автоматично.
+      <h3 style="font-size: 22px; margin-bottom: 8px;">Дякуємо за замовлення в GRAYKO!</h3>
+      <p style="color: #475569; max-width: 480px; margin: 0 auto 20px; font-size: 14px; line-height: 1.5;">
+        Ваше замовлення успішно зареєстровано. Наш менеджер уже зв'язується з вами у <b>Viber / Telegram або за телефоном</b> для надання реквізитів на оплату.
       </p>
+      <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 10px; padding: 12px 16px; margin: 0 auto 24px; max-width: 500px; font-size: 13px; color: #166534; text-align: left;">
+        ℹ️ Одразу після підтвердження оплати замовлення автоматично передається на комплектацію та відправку зі складу Новою Поштою.
+      </div>
 
       <!-- Shipments with Generated TTNs -->
       <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; text-align: left; max-width: 520px; margin: 0 auto 24px;">

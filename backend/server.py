@@ -6,7 +6,9 @@ import traceback
 import urllib.parse
 import mimetypes
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
-from datetime import datetime
+import time
+import threading
+from datetime import datetime, timedelta
 
 # Configure utf-8 stdout for Windows
 if sys.platform == 'win32':
@@ -15,8 +17,10 @@ if sys.platform == 'win32':
 
 # Local imports
 from db import get_db_connection, init_db
-from dropship_feed import run_fast_sync, run_full_sync, validate_and_update_price, seed_database
+from dropship_feed import run_fast_sync, run_full_sync, validate_and_update_price, seed_database, get_feed_url
 from logistics import search_settlements, get_city_warehouses, generate_ttn_number, generate_shipping_sticker_html
+from toysi_client import create_toysi_order, check_toysi_order_status
+from telegram_notifier import send_telegram_order, start_telegram_listener
 
 PORT = int(os.environ.get('PORT', 8077))
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -227,6 +231,15 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
                 self.send_json({"success": True, "message": "Каталог успішно переініціалізовано з оригінальними даними Toysi."})
                 return
 
+            # 6. API: Admin Send Order to Toysi
+            elif path.startswith('/api/admin/orders/') and path.endswith('/send-to-toysi'):
+                parts = path.split('/')
+                order_id = int(parts[4])
+                data = self.read_json_body()
+                is_test = bool(data.get('is_test', False))
+                self.handle_send_toysi_order(order_id, is_test)
+                return
+
             self.send_json({"error": "Endpoint not found"}, status=404)
         except Exception as e:
             traceback.print_exc()
@@ -241,18 +254,29 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
         where_clauses = ["p.is_active = 1"]
         params = []
 
-        # Category filter
+        # Category filter: matches this category OR any descendant child categories
         if 'category' in query:
             cat_val = query['category'][0]
+            cat_id = None
             if cat_val.isdigit():
-                where_clauses.append("p.category_id = ?")
-                params.append(int(cat_val))
+                cat_id = int(cat_val)
             else:
                 cursor.execute("SELECT id FROM categories WHERE slug = ?", (cat_val,))
                 cat_row = cursor.fetchone()
                 if cat_row:
-                    where_clauses.append("p.category_id = ?")
-                    params.append(cat_row["id"])
+                    cat_id = cat_row["id"]
+
+            if cat_id is not None:
+                # Use recursive CTE to include the category and all its children/sub-children
+                where_clauses.append("""p.category_id IN (
+                    WITH RECURSIVE cat_tree(id) AS (
+                        SELECT id FROM categories WHERE id = ?
+                        UNION ALL
+                        SELECT c.id FROM categories c JOIN cat_tree ct ON c.parent_id = ct.id
+                    )
+                    SELECT id FROM cat_tree
+                )""")
+                params.append(cat_id)
 
         # Age group filter
         if 'age_group' in query:
@@ -296,8 +320,8 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
         # Search keyword
         if 'q' in query and query['q'][0].strip():
             kw = f"%{query['q'][0].strip()}%"
-            where_clauses.append("(p.title_uk LIKE ? OR p.description_uk LIKE ? OR p.brand LIKE ? OR p.internal_sku LIKE ?)")
-            params.extend([kw, kw, kw, kw])
+            where_clauses.append("(p.title_uk LIKE ? OR p.description_uk LIKE ? OR p.brand LIKE ? OR p.internal_sku LIKE ? OR p.supplier_sku LIKE ?)")
+            params.extend([kw, kw, kw, kw, kw])
 
         where_sql = " AND ".join(where_clauses)
 
@@ -313,6 +337,23 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
         elif sort_by == 'parts_desc':
             order_sql = "p.parts_count DESC"
 
+        # Pagination: default 48 products per page
+        try:
+            limit = min(120, max(1, int(query.get('limit', [48])[0])))
+        except (ValueError, TypeError):
+            limit = 48
+
+        try:
+            offset = max(0, int(query.get('offset', [0])[0]))
+        except (ValueError, TypeError):
+            offset = 0
+
+        # Query total count for this filter combination
+        count_sql = f"SELECT COUNT(*) as total FROM products p WHERE {where_sql}"
+        cursor.execute(count_sql, params)
+        total_count = cursor.fetchone()['total']
+
+        # Fetch products page
         query_sql = f"""
         SELECT p.*, s.name as supplier_name, s.code as supplier_code, s.warehouse_city as supplier_city, c.name_uk as category_name, c.slug as category_slug
         FROM products p
@@ -320,9 +361,9 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
         LEFT JOIN categories c ON p.category_id = c.id
         WHERE {where_sql}
         ORDER BY {order_sql}
+        LIMIT ? OFFSET ?
         """
-
-        cursor.execute(query_sql, params)
+        cursor.execute(query_sql, params + [limit, offset])
         rows = cursor.fetchall()
 
         products = []
@@ -333,14 +374,14 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
             p_dict['specifications'] = json.loads(p_dict['specifications'] or '{}')
             products.append(p_dict)
 
-        # Extract facets
-        cursor.execute("SELECT DISTINCT brand FROM products WHERE is_active = 1 AND brand IS NOT NULL")
+        # Extract facets (top brands, materials, price range)
+        cursor.execute("SELECT DISTINCT brand FROM products WHERE is_active = 1 AND brand IS NOT NULL AND brand != '' ORDER BY brand ASC LIMIT 40")
         all_brands = [r['brand'] for r in cursor.fetchall()]
 
-        cursor.execute("SELECT DISTINCT material FROM products WHERE is_active = 1 AND material IS NOT NULL")
+        cursor.execute("SELECT DISTINCT material FROM products WHERE is_active = 1 AND material IS NOT NULL AND material != '' ORDER BY material ASC LIMIT 25")
         all_materials = [r['material'] for r in cursor.fetchall()]
 
-        cursor.execute("SELECT DISTINCT age_group FROM products WHERE is_active = 1 AND age_group IS NOT NULL")
+        cursor.execute("SELECT DISTINCT age_group FROM products WHERE is_active = 1 AND age_group IS NOT NULL AND age_group != ''")
         all_age_groups = [r['age_group'] for r in cursor.fetchall()]
 
         cursor.execute("SELECT MIN(price) as min_p, MAX(price) as max_p FROM products WHERE is_active = 1")
@@ -348,7 +389,10 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
 
         conn.close()
         self.send_json({
-            "total": len(products),
+            "total": total_count,
+            "limit": limit,
+            "offset": offset,
+            "has_more": (offset + len(products)) < total_count,
             "products": products,
             "facets": {
                 "brands": all_brands,
@@ -356,7 +400,7 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
                 "age_groups": all_age_groups,
                 "skills": ["дрібна моторика", "інженерне мислення", "просторова уява", "STEM / фізика", "логіка", "сенсорика", "творчість"],
                 "min_price": price_stat["min_p"] or 0,
-                "max_price": price_stat["max_p"] or 2000
+                "max_price": price_stat["max_p"] or 5000
             }
         })
 
@@ -552,7 +596,8 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
                 total_packing_amount += sup['packing_fee']
 
         total_amount = total_products_amount + total_shipping_amount + total_packing_amount
-        payment_status = 'PAID' if payment_method in ['MONOBANK', 'WAYFORPAY', 'APPLE_PAY', 'GOOGLE_PAY'] else 'COD'
+        payment_method = 'MONOBANK'
+        payment_status = 'PAID'
         fiscal_receipt_id = f"CHECKBOX-{random.randint(1000000, 9999999)}"
 
         # 2. Insert Order
@@ -602,6 +647,23 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
         conn.commit()
         conn.close()
 
+        # Send Telegram notification in background thread
+        order_info = {
+            "id": order_id,
+            "order_number": order_number,
+            "customer_name": customer_name,
+            "customer_phone": customer_phone,
+            "delivery_city": delivery_city,
+            "delivery_warehouse": delivery_warehouse,
+            "total_amount": total_amount,
+            "payment_status": payment_status
+        }
+        all_items = []
+        for s_items in items_by_supplier.values():
+            all_items.extend(s_items)
+
+        threading.Thread(target=send_telegram_order, args=(order_info, all_items), daemon=True).start()
+
         self.send_json({
             "success": True,
             "order_number": order_number,
@@ -611,6 +673,33 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
             "total_amount": round(total_amount, 2),
             "shipments": shipment_records
         })
+
+    def handle_send_toysi_order(self, order_id, is_test=False):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM orders WHERE id = ?", (order_id,))
+        order_row = cursor.fetchone()
+        if not order_row:
+            conn.close()
+            self.send_json({"success": False, "error": "Замовлення не знайдено"}, status=404)
+            return
+
+        order = dict(order_row)
+        cursor.execute("""
+        SELECT oi.*, p.supplier_sku, p.title_uk, p.internal_sku
+        FROM order_items oi
+        LEFT JOIN products p ON oi.product_id = p.id
+        WHERE oi.shipment_id IN (SELECT id FROM order_shipments WHERE order_id = ?)
+        """, (order_id,))
+        items = [dict(r) for r in cursor.fetchall()]
+
+        res = create_toysi_order(order, items, is_test=is_test)
+        if res.get('success'):
+            cursor.execute("UPDATE orders SET payment_status = 'PAID' WHERE id = ?", (order_id,))
+            cursor.execute("UPDATE order_shipments SET shipping_status = 'SENT_TO_TOYSI' WHERE order_id = ?", (order_id,))
+            conn.commit()
+        conn.close()
+        self.send_json(res)
 
     def handle_get_orders(self):
         conn = get_db_connection()
@@ -678,8 +767,17 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
         conn = get_db_connection()
         cursor = conn.cursor()
 
+        cursor.execute("SELECT COUNT(*) as cnt FROM products")
+        total_products = cursor.fetchone()['cnt']
+
         cursor.execute("SELECT COUNT(*) as cnt FROM products WHERE is_active = 1")
         active_products = cursor.fetchone()['cnt']
+
+        cursor.execute("SELECT COUNT(*) as cnt FROM products WHERE stock_quantity > 0")
+        in_stock_products = cursor.fetchone()['cnt']
+
+        cursor.execute("SELECT COUNT(*) as cnt FROM categories")
+        total_categories = cursor.fetchone()['cnt']
 
         cursor.execute("SELECT COUNT(*) as cnt, SUM(total_amount) as total_revenue FROM orders")
         orders_stat = cursor.fetchone()
@@ -687,25 +785,81 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
         cursor.execute("SELECT SUM(deposit_balance) as total_deposit FROM suppliers")
         total_deposit = cursor.fetchone()['total_deposit'] or 0.0
 
-        cursor.execute("SELECT * FROM feed_sync_logs ORDER BY id DESC LIMIT 10")
+        cursor.execute("SELECT * FROM feed_sync_logs ORDER BY id DESC LIMIT 15")
         sync_logs = [dict(r) for r in cursor.fetchall()]
 
         cursor.execute("SELECT * FROM suppliers ORDER BY id ASC")
         suppliers = [dict(r) for r in cursor.fetchall()]
 
         conn.close()
+
+        next_sync_str = NEXT_SYNC_TIME.strftime('%Y-%m-%d %H:%M:%S') if NEXT_SYNC_TIME else "Через 4 години"
+
         self.send_json({
+            "total_products": total_products,
             "active_products": active_products,
+            "in_stock_products": in_stock_products,
+            "out_of_stock_products": total_products - in_stock_products,
+            "total_categories": total_categories,
             "orders_count": orders_stat['cnt'] or 0,
             "total_revenue": round(orders_stat['total_revenue'] or 0.0, 2),
             "total_deposit": round(total_deposit, 2),
             "suppliers": suppliers,
-            "sync_logs": sync_logs
+            "sync_logs": sync_logs,
+            "next_sync_time": next_sync_str,
+            "sync_interval": "Кожні 4 години",
+            "feed_url": get_feed_url(),
+            "last_sync_result": LAST_SYNC_RESULT
         })
+
+# Global 4-Hour Background Feed Synchronization Scheduler
+NEXT_SYNC_TIME = None
+LAST_SYNC_RESULT = None
+
+def catalog_sync_scheduler():
+    global NEXT_SYNC_TIME, LAST_SYNC_RESULT
+    interval_seconds = 4 * 3600  # 4 hours
+    while True:
+        try:
+            NEXT_SYNC_TIME = datetime.now() + timedelta(seconds=interval_seconds)
+            time.sleep(interval_seconds)
+            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 🔄 Executing scheduled 4-hour catalog feed update...")
+            res = run_fast_sync(supplier_id=1)
+            LAST_SYNC_RESULT = res
+            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ✅ 4-Hour catalog sync complete: {res.get('items_processed')} items processed, {res.get('items_updated')} updated, {res.get('items_added')} added.")
+        except Exception as e:
+            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ❌ Scheduled catalog sync error: {e}")
+            time.sleep(300)
+
+def start_background_scheduler():
+    global NEXT_SYNC_TIME
+    NEXT_SYNC_TIME = datetime.now() + timedelta(seconds=4 * 3600)
+    scheduler_thread = threading.Thread(target=catalog_sync_scheduler, daemon=True, name="CatalogSyncScheduler")
+    scheduler_thread.start()
+    print(f"🕒 Background 4-hour catalog sync scheduler started. Next scheduled update at: {NEXT_SYNC_TIME.strftime('%Y-%m-%d %H:%M:%S')}")
 
 def run_server():
     init_db()
-    seed_database()
+
+    # Check if database has products already seeded
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) as cnt FROM products")
+    prod_count = c.fetchone()['cnt']
+    conn.close()
+
+    if prod_count == 0:
+        print("📦 Database is empty. Seeding initial catalog from Toysi XML feed...")
+        seed_database()
+    else:
+        print(f"📦 Database already contains {prod_count} catalog products. Skipping initial seed.")
+
+    # Start the 4-hour background catalog sync scheduler
+    start_background_scheduler()
+
+    # Start the Telegram Bot polling listener
+    start_telegram_listener()
+
     server_address = ('127.0.0.1', PORT)
     httpd = ThreadingHTTPServer(server_address, GraykoStoreHandler)
     print(f"==================================================")

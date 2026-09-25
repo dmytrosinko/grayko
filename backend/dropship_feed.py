@@ -120,10 +120,50 @@ def map_age_group(age_val):
         return '14+'
     return '3-5 років'
 
-def parse_description_metadata(desc_html):
+def determine_smart_age_group(desc_html="", title_uk="", category_id=None):
+    text = (title_uk + " " + desc_html).lower()
+    
+    # 1. Explicit age tag in description
+    m_age = re.search(r'<b>Вік:</b>\s*([^<]+)', desc_html or '', re.I)
+    if m_age:
+        mapped = map_age_group(m_age.group(1).strip())
+        if mapped != '3-5 років':
+            return mapped
+
+    # 2. 14+ років
+    if re.search(r'\b(14\+|16\+|18\+|14-16|14-18)\b', text) or any(k in text for k in ['для дорослих', '16+', '18+', 'для компанії', 'румбокс', 'mini house', 'бункер', 'меми', 'мемів', 'хайпові', 'інтерʼєр міні', '1:18', '1:24', 'колекційна модель', 'кубик рубіка 5х5', 'кубик рубіка 4х4', 'вечірка', 'квіз', 'мафія люкс', 'покер']):
+        return '14+'
+
+    # 3. 9-12 років
+    if re.search(r'\b(9\+|10\+|12\+|9-12|10-12|8-12)\b', text) or any(k in text for k in ['квадрокоптер', 'дрон', 'мікроскоп', 'телескоп', 'дослід', 'експеримент', 'робототехнік', 'монополія', 'шахи', 'шашки', 'нарди', 'кубик рубік', 'головоломка', 'пазл 500', 'пазл 1000', 'пазли 500', 'пазли 1000', 'картина за номерами', 'алмазна мозаїка', 'алмазна вишивка', 'радіокер', 'на пульті', 'р/к', 'металевий конструктор', 'робот', 'роботи', 'рація', 'гравюра', 'електронний конструктор', 'науков']):
+        return '9-12 років'
+    if category_id in [98959, 98960, 99063, 99081]:
+        return '9-12 років'
+
+    # 4. 6-8 років
+    if re.search(r'\b(6\+|7\+|8\+|6-8|6-7)\b', text) or any(k in text for k in ['конструктор', 'лего', 'cogo', 'бластер', 'автомат', 'зброя', 'пістолет', 'трансформер', 'трек', 'настільна гра', 'пазл', 'мозаїка', 'фокуси', 'літак', 'вертоліт', 'машинка метал', 'водна зброя', 'школяр', 'першоклас', 'рюкзак', 'пенал', 'фарби акварель', 'гуаш', 'пластилін']):
+        return '6-8 років'
+    if category_id in [99058, 99062, 98961, 99149, 99157, 99163]:
+        return '6-8 років'
+
+    # 5. 1-3 роки
+    if re.search(r'\b(1\+|2\+|1-3|1-2|18\s*міс)\b', text) or any(k in text for k in ['сортер', 'пірамідка', 'толокар', 'каталка', 'біговел', 'пасочки', 'для малюків', 'пальчикові', 'великі кубики', 'вкладиш', 'шнурівка', 'для купання', 'ванночк', 'пісочн', 'відерце', 'лопатка', 'лійка', 'бізіборд', 'килимок пазл', 'гумові тваринки', 'качиня', 'малюк']):
+        return '1-3 роки'
+    if category_id in [99024, 98910, 98906, 98907, 98908, 98909, 99086, 99166]:
+        return '1-3 роки'
+
+    # 6. 0-1 рік
+    if re.search(r'\b(0\+|0-1|3\s*міс|6\s*міс|немовля|новонароджен)\b', text) or any(k in text for k in ['брязкальц', 'прорізувач', 'мобіль', 'гризунець', 'немовля', 'пищалка', 'підвіска на коляску', 'килимок розвиваючий', 'для немовлят', 'новонароджен', 'соска', 'пляшечка для годування', 'комфортер', 'брязкальце']):
+        return '0-1 рік'
+    if category_id in [99037]:
+        return '0-1 рік'
+
+    return '3-5 років'
+
+def parse_description_metadata(desc_html, title_uk="", category_id=None):
     """Extracts Brand, Material, Age, Specifications from description HTML."""
     if not desc_html:
-        return {}, "Тойсі", "безпечний пластик", "3-5 років"
+        desc_html = ""
         
     specs = {}
     brand = None
@@ -148,7 +188,7 @@ def parse_description_metadata(desc_html):
     if not material:
         material = "безпечний пластик"
     if not age_group:
-        age_group = "3-5 років"
+        age_group = determine_smart_age_group(desc_html, title_uk, category_id)
         
     return specs, brand, material, age_group
 
@@ -258,7 +298,7 @@ def seed_database():
             
         desc_elem = o.find('description')
         desc_html = desc_elem.text if desc_elem is not None else ''
-        specs, brand, material, age_group = parse_description_metadata(desc_html)
+        specs, brand, material, age_group = parse_description_metadata(desc_html, name_uk, category_id)
         
         # Extra tags
         is_bestseller = 1 if stock_qty > 20 and price < 1500 and idx % 7 == 0 else 0
@@ -426,7 +466,7 @@ def sync_catalog_from_feed(sync_type='FAST', force_download=True):
                 
             desc_elem = o.find('description')
             desc_html = desc_elem.text if desc_elem is not None else ''
-            specs, brand, material, age_group = parse_description_metadata(desc_html)
+            specs, brand, material, age_group = parse_description_metadata(desc_html, title_uk, category_id)
             
             new_products_batch.append((
                 supplier_id, vendor_code, internal_sku, slug, title_uk, desc_html,

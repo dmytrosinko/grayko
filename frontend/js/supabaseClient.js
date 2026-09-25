@@ -18,6 +18,15 @@ function normalizeJson(val, fallback) {
   }
 }
 
+export const STANDARD_AGE_GROUPS = [
+  '0-1 рік',
+  '1-3 роки',
+  '3-5 років',
+  '6-8 років',
+  '9-12 років',
+  '14+'
+];
+
 export const supabaseClient = {
   isConfigured() {
     return isSupabaseClientConfigured();
@@ -171,17 +180,16 @@ export const supabaseClient = {
     if (_cachedFacets) return _cachedFacets;
     try {
       const headers = getSupabaseHeaders();
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/products?select=brand,material,age_group&is_active=eq.1&limit=500`, { headers });
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/products?select=brand,material&is_active=eq.1&limit=500`, { headers });
       if (res.ok) {
         const rows = await res.json();
         const brands = Array.from(new Set(rows.map(r => r.brand).filter(Boolean))).sort().slice(0, 30);
         const materials = Array.from(new Set(rows.map(r => r.material).filter(Boolean))).sort().slice(0, 20);
-        const age_groups = Array.from(new Set(rows.map(r => r.age_group).filter(Boolean))).sort();
 
         _cachedFacets = {
           brands,
           materials,
-          age_groups,
+          age_groups: STANDARD_AGE_GROUPS,
           skills: ["дрібна моторика", "інженерне мислення", "просторова уява", "STEM / фізика", "логіка", "сенсорика", "творчість"],
           min_price: 5,
           max_price: 5000
@@ -195,7 +203,7 @@ export const supabaseClient = {
     return {
       brands: [],
       materials: [],
-      age_groups: [],
+      age_groups: STANDARD_AGE_GROUPS,
       skills: ["дрібна моторика", "інженерне мислення", "просторова уява", "STEM / фізика", "логіка", "сенсорика", "творчість"],
       min_price: 5,
       max_price: 5000

@@ -13,8 +13,9 @@ export function createProductCard(product) {
 
   const card = document.createElement('div');
   card.className = 'product-card';
+  card.style.cursor = 'pointer';
   card.innerHTML = `
-    <div class="card-media" onclick="window.app.openProductModal(${product.id})">
+    <div class="card-media">
       <img src="${imgUrl}" alt="${product.title_uk}" class="card-img" loading="lazy">
       
       <div class="card-badges">
@@ -36,7 +37,7 @@ export function createProductCard(product) {
         <span class="card-sku">${product.internal_sku}</span>
       </div>
 
-      <h3 class="card-title" onclick="window.app.openProductModal(${product.id})">
+      <h3 class="card-title">
         ${product.title_uk}
       </h3>
 
@@ -57,6 +58,12 @@ export function createProductCard(product) {
       </div>
     </div>
   `;
+
+  // Tap anywhere on card to open details modal
+  card.addEventListener('click', (e) => {
+    if (e.target.closest('.btn-add-cart')) return;
+    window.app.openProductModal(product.id);
+  });
 
   // Add to cart click
   const addBtn = card.querySelector('.btn-add-cart');

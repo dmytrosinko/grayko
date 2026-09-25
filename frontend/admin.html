@@ -26,6 +26,19 @@
     .btn-admin-primary:hover { background: #48A9A6; color: white; }
     .nav-brand-title { font-size: 22px; font-weight: 800; font-family: 'Outfit', sans-serif; color: white; }
     .nav-brand-title span { color: #FF5A5F; }
+    .rrp-test-grid { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 12px; align-items: end; }
+    .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    @media (max-width: 768px) {
+      .admin-wrapper { margin: 12px auto; padding: 0 10px; }
+      .admin-header-card { padding: 16px; margin-bottom: 14px; border-radius: 12px; }
+      .admin-content-card { padding: 16px; border-radius: 12px; }
+      .admin-stat-cards { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+      .admin-stat-card { padding: 12px; }
+      .stat-val { font-size: 18px; }
+      .admin-tabs { gap: 6px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+      .admin-tab-btn { padding: 8px 12px; font-size: 12px; flex-shrink: 0; }
+      .rrp-test-grid { grid-template-columns: 1fr; gap: 12px; }
+    }
   </style>
 </head>
 <body>
@@ -103,21 +116,23 @@
         </div>
 
         <h4 style="font-size: 15px; margin-bottom: 12px; color: white;">Історія останніх синхронізацій:</h4>
-        <table class="admin-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Тип</th>
-              <th>Статус</th>
-              <th>Опрацьовано</th>
-              <th>Коригувань РРЦ</th>
-              <th>Час</th>
-            </tr>
-          </thead>
-          <tbody id="sync-logs-tbody">
-            <tr><td colspan="6" style="text-align: center; color: #94A3B8;">Завантаження журналу...</td></tr>
-          </tbody>
-        </table>
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Тип</th>
+                <th>Статус</th>
+                <th>Опрацьовано</th>
+                <th>Коригувань РРЦ</th>
+                <th>Час</th>
+              </tr>
+            </thead>
+            <tbody id="sync-logs-tbody">
+              <tr><td colspan="6" style="text-align: center; color: #94A3B8;">Завантаження журналу...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- TAB 2: RRP ENFORCEMENT -->
@@ -131,7 +146,7 @@
 
         <h4 style="font-size: 15px; margin-bottom: 12px; color: white;">Тестування захисту від демпінгу цін:</h4>
         <div style="background: #0B132B; padding: 20px; border-radius: 12px; border: 1px solid #3A506B; margin-bottom: 20px;">
-          <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 12px; align-items: end;">
+          <div class="rrp-test-grid">
             <div>
               <label class="form-label" style="color:#94A3B8;">Оберіть товар для перевірки:</label>
               <select id="rrp-test-product" class="form-select"></select>

@@ -52,7 +52,7 @@ async function loadOrders() {
 
     container.innerHTML = orders.map(o => `
       <div style="background: #0B132B; border: 1px solid #3A506B; border-radius: 12px; padding: 18px; margin-bottom: 16px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #3A506B; padding-bottom: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; border-bottom: 1px solid #3A506B; padding-bottom: 10px;">
           <div>
             <strong style="font-size: 16px; color: white;">Замовлення № ${o.order_number}</strong>
             <span style="font-size: 12px; color: #94A3B8; margin-left: 8px;">${o.created_at}</span>
@@ -72,7 +72,7 @@ async function loadOrders() {
         <!-- Shipments in Order -->
         <div style="display: flex; flex-direction: column; gap: 8px;">
           ${(o.shipments || []).map(sh => `
-            <div style="display: flex; justify-content: space-between; align-items: center; background: #1C2541; padding: 12px 16px; border-radius: 8px; border: 1px solid #3A506B;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; background: #1C2541; padding: 12px 16px; border-radius: 8px; border: 1px solid #3A506B;">
               <div>
                 <span style="font-weight: 700; font-size: 13px; color: white;">📦 ${sh.shipment_number} (${sh.supplier_name}, м. ${sh.supplier_city})</span>
                 <div style="font-size: 13px; color: #FF5A5F; font-family: monospace; font-weight: 800; margin-top: 2px;">

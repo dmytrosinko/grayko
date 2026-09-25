@@ -32,7 +32,7 @@ export function renderFiltersSidebar(facets = {}) {
       <h3>Фільтри</h3>
       <div style="display: flex; align-items: center; gap: 12px;">
         <button class="btn-reset-filters" onclick="window.app.resetFilters()">Скинути</button>
-        <button class="mobile-filter-close-btn" onclick="document.getElementById('filters-sidebar').classList.remove('mobile-open'); document.getElementById('modal-backdrop').classList.add('hidden');" aria-label="Закрити фільтри">✕</button>
+        <button class="mobile-filter-close-btn" onclick="window.app.closeFilters()" aria-label="Закрити фільтри">✕</button>
       </div>
     </div>
 
@@ -121,7 +121,7 @@ export function renderFiltersSidebar(facets = {}) {
     </div>
 
     <div class="mobile-filter-apply-wrapper">
-      <button class="btn btn-primary btn-block" onclick="document.getElementById('filters-sidebar').classList.remove('mobile-open'); document.getElementById('modal-backdrop').classList.add('hidden');">
+      <button class="btn btn-primary btn-block" onclick="window.app.closeFilters()">
         Показати результати ✨
       </button>
     </div>

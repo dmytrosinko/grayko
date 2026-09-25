@@ -147,19 +147,52 @@ class ToysApp {
 
     // Mobile filter toggle
     const mobileFilterBtn = document.getElementById('btn-toggle-mobile-filters');
-    const sidebar = document.getElementById('filters-sidebar');
-    const backdrop = document.getElementById('modal-backdrop');
-    if (mobileFilterBtn && sidebar) {
+    if (mobileFilterBtn) {
       mobileFilterBtn.addEventListener('click', () => {
-        const isOpen = sidebar.classList.toggle('mobile-open');
-        if (backdrop) {
-          backdrop.classList.toggle('hidden', !isOpen);
-        }
+        this.toggleFilters();
       });
     }
   }
 
   // Global methods accessible from HTML onclick
+  toggleFilters() {
+    const sidebar = document.getElementById('filters-sidebar');
+    if (sidebar && sidebar.classList.contains('mobile-open')) {
+      this.closeFilters();
+    } else {
+      this.openFilters();
+    }
+  }
+
+  openFilters() {
+    const sidebar = document.getElementById('filters-sidebar');
+    const backdrop = document.getElementById('modal-backdrop');
+    if (sidebar) sidebar.classList.add('mobile-open');
+    if (backdrop) backdrop.classList.remove('hidden');
+    this.checkBodyModalOpen();
+  }
+
+  closeFilters() {
+    const sidebar = document.getElementById('filters-sidebar');
+    const backdrop = document.getElementById('modal-backdrop');
+    if (sidebar) sidebar.classList.remove('mobile-open');
+    if (backdrop && document.querySelectorAll('.modal-container:not(.hidden)').length === 0 && !document.getElementById('cart-drawer')?.classList.contains('open')) {
+      backdrop.classList.add('hidden');
+    }
+    this.checkBodyModalOpen();
+  }
+
+  checkBodyModalOpen() {
+    const hasOpenModal = document.querySelectorAll('.modal-container:not(.hidden)').length > 0;
+    const hasOpenCart = document.getElementById('cart-drawer')?.classList.contains('open');
+    const hasOpenFilters = document.getElementById('filters-sidebar')?.classList.contains('mobile-open');
+    if (hasOpenModal || hasOpenCart || hasOpenFilters) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+  }
+
   filterByCategory(catId) {
     state.setFilter('category', catId);
     document.getElementById('catalog').scrollIntoView({ behavior: 'smooth' });
@@ -180,6 +213,7 @@ class ToysApp {
 
   openProductModal(productId) {
     openProductModal(productId);
+    this.checkBodyModalOpen();
   }
 
   async addToCartById(productId) {
@@ -197,36 +231,41 @@ class ToysApp {
     renderCartDrawer();
     if (drawer) drawer.classList.add('open');
     if (backdrop) backdrop.classList.remove('hidden');
+    this.checkBodyModalOpen();
   }
 
   closeCart() {
     const drawer = document.getElementById('cart-drawer');
     const backdrop = document.getElementById('modal-backdrop');
     if (drawer) drawer.classList.remove('open');
-    if (backdrop && document.querySelectorAll('.modal-container:not(.hidden)').length === 0) {
+    if (backdrop && document.querySelectorAll('.modal-container:not(.hidden)').length === 0 && !document.getElementById('filters-sidebar')?.classList.contains('mobile-open')) {
       backdrop.classList.add('hidden');
     }
+    this.checkBodyModalOpen();
   }
 
   openCheckout() {
     this.closeCart();
     openCheckoutModal();
+    this.checkBodyModalOpen();
   }
 
   closeModal() {
     document.querySelectorAll('.modal-container').forEach(m => m.classList.add('hidden'));
     const backdrop = document.getElementById('modal-backdrop');
     const drawer = document.getElementById('cart-drawer');
-    if (drawer && !drawer.classList.contains('open') && backdrop) {
+    const filters = document.getElementById('filters-sidebar');
+    if ((!drawer || !drawer.classList.contains('open')) && (!filters || !filters.classList.contains('mobile-open')) && backdrop) {
       backdrop.classList.add('hidden');
     }
+    this.checkBodyModalOpen();
   }
 
   closeAllModals() {
     this.closeCart();
     this.closeModal();
-    const sidebar = document.getElementById('filters-sidebar');
-    if (sidebar) sidebar.classList.remove('mobile-open');
+    this.closeFilters();
+    document.body.classList.remove('modal-open');
   }
 
   openDeliveryModal() {
@@ -256,6 +295,7 @@ class ToysApp {
     `;
     modal.classList.remove('hidden');
     backdrop.classList.remove('hidden');
+    this.checkBodyModalOpen();
   }
 
   openConditionsModal() {
@@ -275,6 +315,7 @@ class ToysApp {
     `;
     modal.classList.remove('hidden');
     backdrop.classList.remove('hidden');
+    this.checkBodyModalOpen();
   }
 }
 

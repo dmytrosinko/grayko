@@ -28,6 +28,7 @@ class ToysApp {
     // Load Categories & Initial Catalog
     await this.loadCategories();
     await this.loadProducts();
+    this.loadHeroShowcase();
 
     // Listen to reactive state changes
     state.on('filters_changed', () => {
@@ -276,6 +277,57 @@ class ToysApp {
   openProductModal(productId) {
     openProductModal(productId);
     this.checkBodyModalOpen();
+  }
+
+  async loadHeroShowcase() {
+    try {
+      const hypeSkus = ['306141', '306140', '306169', '306392', '278359'];
+      let topProduct = null;
+
+      for (const sku of hypeSkus) {
+        try {
+          const res = await api.getCatalog({ q: sku, in_stock: 1, limit: 1 });
+          if (res && res.products && res.products.length) {
+            topProduct = res.products[0];
+            break;
+          }
+        } catch (e) {}
+      }
+
+      if (!topProduct) {
+        try {
+          const res = await api.getCatalog({ in_stock: 1, min_price: 150, sort: 'popular', limit: 1 });
+          if (res && res.products && res.products.length) {
+            topProduct = res.products[0];
+          }
+        } catch (e) {}
+      }
+
+      if (topProduct) {
+        const card = document.getElementById('hero-showcase-card');
+        const img = document.getElementById('hero-showcase-img');
+        const brand = document.getElementById('hero-showcase-brand');
+        const title = document.getElementById('hero-showcase-title');
+        const price = document.getElementById('hero-showcase-price');
+        const chip1 = document.getElementById('hero-showcase-chip1');
+        const chip2 = document.getElementById('hero-showcase-chip2');
+
+        if (card) {
+          card.onclick = () => window.app.openProductModal(topProduct.id);
+        }
+        if (img && Array.isArray(topProduct.images) && topProduct.images[0]) {
+          img.src = topProduct.images[0];
+          img.alt = topProduct.title_uk;
+        }
+        if (brand) brand.textContent = topProduct.brand || 'TOYSI';
+        if (title) title.textContent = topProduct.title_uk;
+        if (price) price.textContent = `${topProduct.price} грн`;
+        if (chip1) chip1.textContent = topProduct.age_group ? `👶 ${topProduct.age_group}` : '🔥 Хіт';
+        if (chip2) chip2.textContent = topProduct.stock_quantity > 0 ? `📦 В наявності (${topProduct.stock_quantity} шт)` : '📦 В наявності';
+      }
+    } catch (err) {
+      console.warn("Could not load dynamic hero showcase:", err);
+    }
   }
 
   async addToCartById(productId) {

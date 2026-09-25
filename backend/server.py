@@ -21,6 +21,17 @@ from dropship_feed import run_fast_sync, run_full_sync, validate_and_update_pric
 from logistics import search_settlements, get_city_warehouses, generate_ttn_number, generate_shipping_sticker_html
 from toysi_client import create_toysi_order, check_toysi_order_status
 from telegram_notifier import send_telegram_order, start_telegram_listener
+from supabase_client import (
+    is_supabase_configured,
+    load_supabase_credentials,
+    supabase_get_categories,
+    supabase_get_catalog,
+    supabase_get_product,
+    supabase_create_order,
+    supabase_get_orders,
+    supabase_update_order,
+    supabase_get_admin_stats
+)
 
 PORT = int(os.environ.get('PORT', 8077))
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -78,8 +89,19 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
             path = parsed_url.path
             query = urllib.parse.parse_qs(parsed_url.query)
 
+            # 0. API: App Config & Database Mode
+            if path == '/api/config':
+                url, _ = load_supabase_credentials()
+                configured = is_supabase_configured()
+                self.send_json({
+                    "using_supabase": configured,
+                    "database": "Supabase PostgreSQL" if configured else "SQLite",
+                    "supabase_url": url if configured else None
+                })
+                return
+
             # 1. API: Catalog Products & Facets
-            if path == '/api/catalog':
+            elif path == '/api/catalog':
                 self.handle_get_catalog(query)
                 return
 
@@ -91,18 +113,33 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
 
             # 3. API: Categories
             elif path == '/api/categories':
+                if is_supabase_configured():
+                    cats = supabase_get_categories()
+                    if cats is not None:
+                        self.send_json({"categories": cats, "data_source": "supabase"})
+                        return
                 conn = get_db_connection()
                 categories = [dict(r) for r in conn.execute("SELECT * FROM categories ORDER BY id ASC").fetchall()]
                 conn.close()
-                self.send_json({"categories": categories})
+                self.send_json({"categories": categories, "data_source": "sqlite"})
                 return
 
             # 4. API: Suppliers & Dropshipping Hubs
             elif path == '/api/suppliers':
+                if is_supabase_configured():
+                    url, key = load_supabase_credentials()
+                    try:
+                        import requests
+                        r = requests.get(f"{url.rstrip('/')}/rest/v1/suppliers?select=*&order=id.asc", headers={'apikey': key, 'Authorization': f'Bearer {key}'}, timeout=5)
+                        if r.status_code == 200:
+                            self.send_json({"suppliers": r.json(), "data_source": "supabase"})
+                            return
+                    except Exception:
+                        pass
                 conn = get_db_connection()
                 suppliers = [dict(r) for r in conn.execute("SELECT * FROM suppliers ORDER BY id ASC").fetchall()]
                 conn.close()
-                self.send_json({"suppliers": suppliers})
+                self.send_json({"suppliers": suppliers, "data_source": "sqlite"})
                 return
 
             # 5. API: Nova Poshta Logistics
@@ -240,6 +277,16 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
                 self.handle_send_toysi_order(order_id, is_test)
                 return
 
+            # 7. API: Admin Sync to Supabase
+            elif path == '/api/admin/supabase/sync':
+                from supabase_client import sync_sqlite_to_supabase, is_supabase_configured
+                if not is_supabase_configured():
+                    self.send_json({"success": False, "error": "Supabase не налаштовано. Вкажіть ваші SUPABASE_URL та SUPABASE_KEY у файлі env/supabase."}, status=400)
+                    return
+                res = sync_sqlite_to_supabase()
+                self.send_json(res)
+                return
+
             self.send_json({"error": "Endpoint not found"}, status=404)
         except Exception as e:
             traceback.print_exc()
@@ -248,6 +295,12 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
     # ---------------- HANDLERS ---------------- #
 
     def handle_get_catalog(self, query):
+        if is_supabase_configured():
+            res = supabase_get_catalog(query)
+            if res is not None:
+                self.send_json(res)
+                return
+
         conn = get_db_connection()
         cursor = conn.cursor()
 
@@ -405,6 +458,12 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
         })
 
     def handle_get_product(self, slug_or_id):
+        if is_supabase_configured():
+            p = supabase_get_product(slug_or_id)
+            if p:
+                self.send_json({"product": p, "cross_sells": [], "data_source": "supabase"})
+                return
+
         conn = get_db_connection()
         cursor = conn.cursor()
 
@@ -664,6 +723,47 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
 
         threading.Thread(target=send_telegram_order, args=(order_info, all_items), daemon=True).start()
 
+        # Sync order to Supabase
+        if is_supabase_configured():
+            try:
+                supa_order = {
+                    "order_number": order_number,
+                    "customer_name": customer_name,
+                    "customer_phone": customer_phone,
+                    "customer_email": customer_email,
+                    "customer_comment": customer_comment,
+                    "delivery_type": delivery_type,
+                    "delivery_city": delivery_city,
+                    "delivery_warehouse": delivery_warehouse,
+                    "payment_status": payment_status,
+                    "payment_method": payment_method,
+                    "total_products_amount": total_products_amount,
+                    "total_shipping_amount": total_shipping_amount,
+                    "total_amount": total_amount,
+                    "fiscal_receipt_id": fiscal_receipt_id
+                }
+                supa_shipments = []
+                for sup_id, s_items in items_by_supplier.items():
+                    supa_shipments.append({
+                        "supplier_id": sup_id,
+                        "shipment_number": f"{order_number}-SH{len(supa_shipments)+1}",
+                        "ttn_number": generate_ttn_number(),
+                        "shipping_cost": 80.0,
+                        "packing_fee": 0.0,
+                        "shipping_status": "NEW",
+                        "items": [{
+                            "product_id": it['product']['id'],
+                            "quantity": it['quantity'],
+                            "price": it['price'],
+                            "cost_price": it['cost_price'],
+                            "title": it['product']['title_uk'],
+                            "sku": it['product']['internal_sku']
+                        } for it in s_items]
+                    })
+                threading.Thread(target=supabase_create_order, args=(supa_order, supa_shipments), daemon=True).start()
+            except Exception as e:
+                print(f"Supabase order creation notice: {e}")
+
         self.send_json({
             "success": True,
             "order_number": order_number,
@@ -698,10 +798,28 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
             cursor.execute("UPDATE orders SET payment_status = 'PAID' WHERE id = ?", (order_id,))
             cursor.execute("UPDATE order_shipments SET shipping_status = 'SENT_TO_TOYSI' WHERE order_id = ?", (order_id,))
             conn.commit()
+
+            # Update Supabase as well
+            if is_supabase_configured():
+                try:
+                    threading.Thread(
+                        target=supabase_update_order,
+                        args=(order_id, {"payment_status": "PAID", "toysi_order_id": res.get("toysi_order_id")}),
+                        daemon=True
+                    ).start()
+                except Exception as e:
+                    print(f"Supabase order update notice: {e}")
+
         conn.close()
         self.send_json(res)
 
     def handle_get_orders(self):
+        if is_supabase_configured():
+            supa_orders = supabase_get_orders()
+            if supa_orders is not None:
+                self.send_json({"orders": supa_orders, "data_source": "supabase"})
+                return
+
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM orders ORDER BY id DESC LIMIT 50")
@@ -764,6 +882,17 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
         self.send_html(html)
 
     def handle_get_admin_stats(self):
+        if is_supabase_configured():
+            stats = supabase_get_admin_stats()
+            if stats is not None:
+                next_sync_str = NEXT_SYNC_TIME.strftime('%Y-%m-%d %H:%M:%S') if NEXT_SYNC_TIME else "Через 4 години"
+                stats["next_sync_time"] = next_sync_str
+                stats["sync_interval"] = "Кожні 4 години"
+                stats["feed_url"] = get_feed_url()
+                stats["last_sync_result"] = LAST_SYNC_RESULT
+                self.send_json(stats)
+                return
+
         conn = get_db_connection()
         cursor = conn.cursor()
 

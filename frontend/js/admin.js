@@ -256,4 +256,34 @@ window.testPriceUpdate = async function() {
   }
 };
 
+window.triggerSupabaseSync = async function() {
+  const box = document.getElementById('sync-result-box');
+  box.innerHTML = `<span style="color:#10B981;">⏳ Синхронізація товарів та категорій з бойовою базою Supabase... Зачекайте, будь ласка.</span>`;
+
+  try {
+    const res = await fetch('/api/admin/supabase/sync', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      box.innerHTML = `
+        <div style="background: rgba(16, 185, 129, 0.2); color: #10B981; padding: 12px 16px; border-radius: 8px; font-weight: 600; border: 1px solid rgba(16, 185, 129, 0.3); line-height: 1.5;">
+          ✓ Успішно синхронізовано з Supabase за ${data.duration_seconds} с!<br>
+          <span style="font-size: 12px; color: #CBD5E1;">
+            Постачальників: <b>${data.suppliers_synced}</b> |
+            Категорій: <b>${data.categories_synced}</b> |
+            Товарів синхронізовано: <b>${(data.products_synced || 0).toLocaleString('uk-UA')}</b>.
+          </span>
+        </div>
+      `;
+    } else {
+      box.innerHTML = `
+        <div style="background: rgba(255, 90, 95, 0.2); color: #FFA5A8; padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(255, 90, 95, 0.3);">
+          ⛔ ${data.error || 'Помилка синхронізації з Supabase. Перевірте реквізити в env/supabase'}
+        </div>
+      `;
+    }
+  } catch (err) {
+    box.innerHTML = `<div style="color: #FF5A5F; padding: 10px;">Помилка запиту: ${err.message}</div>`;
+  }
+};
+
 initAdmin();

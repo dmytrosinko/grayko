@@ -24,3 +24,5 @@ Thumbs.db
 # Database (auto-generated on launch)
 data/*.db
 data/*.db-journal
+
+docs/Dogovir_Komisiyi_Toysi_Grayko.docx

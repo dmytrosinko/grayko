@@ -468,6 +468,15 @@ def sync_catalog_from_feed(sync_type='FAST', force_download=True):
     
     conn.commit()
     conn.close()
+
+    # Trigger asynchronous sync to Supabase if configured
+    try:
+        import threading
+        from supabase_client import is_supabase_configured, sync_sqlite_to_supabase
+        if is_supabase_configured():
+            threading.Thread(target=sync_sqlite_to_supabase, daemon=True, name="SupabaseCatalogSync").start()
+    except Exception as e:
+        print(f"Supabase trigger notice: {e}")
     
     elapsed = time.time() - t0
     result = {
@@ -513,6 +522,20 @@ def validate_and_update_price(product_id, new_price):
     cursor.execute("UPDATE products SET price = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (new_price, product_id))
     conn.commit()
     conn.close()
+
+    # Sync price change to Supabase if configured
+    try:
+        from supabase_client import is_supabase_configured, patch_supabase_product
+        if is_supabase_configured():
+            import threading
+            threading.Thread(
+                target=patch_supabase_product,
+                args=(product_id, {"price": new_price, "updated_at": datetime.now().isoformat()}),
+                daemon=True
+            ).start()
+    except Exception as e:
+        print(f"Notice: Supabase price sync: {e}")
+
     return {"success": True, "new_price": new_price, "product_title": product["title_uk"]}
 
 if __name__ == '__main__':

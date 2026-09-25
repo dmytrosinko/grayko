@@ -1,7 +1,10 @@
 /**
- * GRAYKO REST API Client with Automatic Static/Netlify Offline Fallback
+ * GRAYKO REST & Supabase API Client
  * 
- * Works both with a live Python backend server AND autonomously on static hosts (Netlify / GitHub Pages).
+ * Works seamlessly across environments:
+ * 1. Direct Supabase PostgreSQL client (Netlify production static hosting)
+ * 2. Live Python backend server (/api/...)
+ * 3. Autonomous offline fallback (localStorage & mockData)
  */
 
 import {
@@ -11,6 +14,8 @@ import {
   CITIES_DATA,
   generateTTN
 } from './mockData.js';
+
+import { supabaseClient } from './supabaseClient.js';
 
 // Local storage keys
 const STORAGE_KEY_PRODUCTS = 'grayko_products_db';
@@ -83,10 +88,6 @@ function saveLocalOrders(orders) {
   }
 }
 
-/**
- * Safely executes a fetch request; if it fails or returns non-JSON (like Netlify 404 HTML),
- * executes the fallback function.
- */
 async function safeFetch(url, options = {}, fallbackFn) {
   try {
     const res = await fetch(url, options);
@@ -95,7 +96,7 @@ async function safeFetch(url, options = {}, fallbackFn) {
       return await res.json();
     }
   } catch (err) {
-    // Backend offline or running on static host
+    // Offline or static host
   }
   return fallbackFn();
 }
@@ -103,6 +104,16 @@ async function safeFetch(url, options = {}, fallbackFn) {
 export const api = {
   // Catalog & Products
   async getCatalog(params = {}) {
+    // 1. Direct Supabase Query (Primary in production on Netlify)
+    if (supabaseClient.isConfigured()) {
+      try {
+        return await supabaseClient.getCatalog(params);
+      } catch (err) {
+        console.warn("Supabase query notice, checking local backend:", err);
+      }
+    }
+
+    // 2. Local Python Server (http://localhost:8077/api/catalog)
     const query = new URLSearchParams();
     if (params.category) query.set('category', params.category);
     if (params.sort) query.set('sort', params.sort);
@@ -173,13 +184,6 @@ export const api = {
         products = products.filter(p => brands.includes(p.brand));
       }
 
-      // Filter by Skill
-      if (params.skill) {
-        products = products.filter(p =>
-          Array.isArray(p.skills_developed) && p.skills_developed.includes(params.skill)
-        );
-      }
-
       // Filter by Price Range
       if (params.min_price != null && params.min_price !== '') {
         const min = parseFloat(params.min_price);
@@ -188,14 +192,6 @@ export const api = {
       if (params.max_price != null && params.max_price !== '') {
         const max = parseFloat(params.max_price);
         products = products.filter(p => p.price <= max);
-      }
-
-      // Filter by Bestseller / New
-      if (params.is_bestseller) {
-        products = products.filter(p => p.is_bestseller);
-      }
-      if (params.is_new) {
-        products = products.filter(p => p.is_new);
       }
 
       // Sorting
@@ -207,11 +203,9 @@ export const api = {
       } else if (sort === 'new') {
         products.sort((a, b) => (b.is_new ? 1 : 0) - (a.is_new ? 1 : 0) || b.id - a.id);
       } else {
-        // popular
         products.sort((a, b) => (b.is_bestseller ? 1 : 0) - (a.is_bestseller ? 1 : 0) || b.stock_quantity - a.stock_quantity);
       }
 
-      // Calculate Facets from all active products
       const allActive = getLocalProducts().filter(p => p.is_active !== 0);
       const ageSet = new Set();
       const matSet = new Set();
@@ -222,41 +216,42 @@ export const api = {
 
       allActive.forEach(p => {
         if (p.age_group) ageSet.add(p.age_group);
-        if (p.material) {
-          p.material.split(',').forEach(m => matSet.add(m.trim()));
-        }
+        if (p.material) p.material.split(',').forEach(m => matSet.add(m.trim()));
         if (p.brand) brandSet.add(p.brand);
-        if (Array.isArray(p.skills_developed)) {
-          p.skills_developed.forEach(s => skillSet.add(s));
-        }
         if (p.price < minP) minP = p.price;
         if (p.price > maxP) maxP = p.price;
       });
 
-      const facets = {
-        age_groups: Array.from(ageSet).sort(),
-        materials: Array.from(matSet).sort(),
-        brands: Array.from(brandSet).sort(),
-        skills: Array.from(skillSet).sort(),
-        min_price: minP === Infinity ? 0 : Math.floor(minP),
-        max_price: maxP === -Infinity ? 2000 : Math.ceil(maxP)
-      };
-
       return {
         products,
-        facets,
+        facets: {
+          age_groups: Array.from(ageSet).sort(),
+          materials: Array.from(matSet).sort(),
+          brands: Array.from(brandSet).sort(),
+          skills: ["дрібна моторика", "інженерне мислення", "просторова уява", "STEM / фізика", "логіка", "сенсорика", "творчість"],
+          min_price: minP === Infinity ? 0 : Math.floor(minP),
+          max_price: maxP === -Infinity ? 2000 : Math.ceil(maxP)
+        },
         total: products.length
       };
     });
   },
 
   async getProduct(slugOrId) {
+    if (supabaseClient.isConfigured()) {
+      try {
+        const res = await supabaseClient.getProduct(slugOrId);
+        if (res && res.product) return res;
+      } catch (err) {
+        console.warn("Supabase product query error:", err);
+      }
+    }
+
     return safeFetch(`/api/products/${slugOrId}`, {}, () => {
       const all = getLocalProducts();
       const product = all.find(p => p.id === parseInt(slugOrId, 10) || p.slug === slugOrId);
       if (!product) return { product: null, cross_sells: [] };
 
-      // Find cross-sell recommendations
       const cross_sells = all
         .filter(p => p.id !== product.id && (p.category_id === product.category_id || p.is_bestseller))
         .slice(0, 3);
@@ -266,12 +261,30 @@ export const api = {
   },
 
   async getCategories() {
+    if (supabaseClient.isConfigured()) {
+      try {
+        const categories = await supabaseClient.getCategories();
+        if (categories && categories.length) return { categories, data_source: 'supabase' };
+      } catch (err) {
+        console.warn("Supabase categories error:", err);
+      }
+    }
+
     return safeFetch('/api/categories', {}, () => {
       return { categories: INITIAL_CATEGORIES };
     });
   },
 
   async getSuppliers() {
+    if (supabaseClient.isConfigured()) {
+      try {
+        const suppliers = await supabaseClient.getSuppliers();
+        if (suppliers && suppliers.length) return { suppliers, data_source: 'supabase' };
+      } catch (err) {
+        console.warn("Supabase suppliers error:", err);
+      }
+    }
+
     return safeFetch('/api/suppliers', {}, () => {
       return { suppliers: INITIAL_SUPPLIERS };
     });
@@ -353,7 +366,7 @@ export const api = {
       Object.values(supplierMap).forEach(sup => {
         if (sup.items.length > 0) {
           const packing = sup.subtotal >= sup.free_packing_threshold ? 0 : sup.packing_fee;
-          const shipping = 80.00; // Standard Nova Poshta rate
+          const shipping = 80.00;
           shipments.push({
             supplier_id: sup.id,
             supplier_name: sup.name,
@@ -383,6 +396,14 @@ export const api = {
   },
 
   async createOrder(orderData) {
+    if (supabaseClient.isConfigured()) {
+      try {
+        return await supabaseClient.createOrder(orderData);
+      } catch (err) {
+        console.warn("Supabase order error, using local/api:", err);
+      }
+    }
+
     return safeFetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -436,6 +457,15 @@ export const api = {
   },
 
   async getOrders() {
+    if (supabaseClient.isConfigured()) {
+      try {
+        const orders = await supabaseClient.getOrders();
+        if (orders) return { orders, data_source: 'supabase' };
+      } catch (err) {
+        console.warn("Supabase orders error:", err);
+      }
+    }
+
     return safeFetch('/api/orders', {}, () => {
       return { orders: getLocalOrders() };
     });
@@ -443,6 +473,15 @@ export const api = {
 
   // Admin & Dropshipping Hub
   async getAdminStats() {
+    if (supabaseClient.isConfigured()) {
+      try {
+        const stats = await supabaseClient.getAdminStats();
+        if (stats) return stats;
+      } catch (err) {
+        console.warn("Supabase stats error:", err);
+      }
+    }
+
     return safeFetch('/api/admin/stats', {}, () => {
       const orders = getLocalOrders();
       const products = getLocalProducts().filter(p => p.is_active !== 0);

@@ -18,6 +18,18 @@
 
   <link rel="stylesheet" href="/css/index.css">
   <link rel="stylesheet" href="/css/components.css">
+
+  <script>
+    // Suppress Netlify badge & drawer injection
+    const _cleanNetlify = () => {
+      document.querySelectorAll('#nl-badge-frame, iframe[title*="Netlify"], #netlify-drawer, [data-netlify-drawer]').forEach(el => el.remove());
+    };
+    if (typeof MutationObserver !== 'undefined') {
+      new MutationObserver(_cleanNetlify).observe(document.documentElement, { childList: true, subtree: true });
+    }
+    window.addEventListener('DOMContentLoaded', _cleanNetlify);
+    window.addEventListener('load', _cleanNetlify);
+  </script>
 </head>
 <body>
   <!-- Top Notification Bar -->
@@ -102,27 +114,27 @@
     </div>
   </section>
 
-  <!-- Categories Horizontal Bar -->
-  <section class="categories-bar-section">
-    <div class="container">
-      <div id="category-pills" class="categories-scroll-wrapper"></div>
-    </div>
-  </section>
-
   <!-- Main Storefront Catalog Section -->
   <main id="catalog" class="catalog-section">
     <div class="container">
       <!-- Section Header with active filter tags and sorting -->
       <div class="catalog-top-bar">
-        <div>
-          <h2 class="section-title">Каталог дитячих іграшок</h2>
+        <div class="catalog-header-text">
+          <nav id="catalog-breadcrumbs" class="catalog-breadcrumbs" aria-label="Хлібні крихти"></nav>
+          <h2 id="catalog-title" class="section-title">Каталог дитячих іграшок</h2>
           <p id="catalog-count-label" class="text-muted">Завантаження асортименту...</p>
         </div>
 
         <div class="catalog-controls">
-          <!-- Mobile Filter Button -->
-          <button id="btn-toggle-mobile-filters" class="btn btn-outline btn-mobile-filter" aria-label="Фільтри">
-            <span class="icon">⚡</span><span>Фільтри (<span id="mobile-filter-count">0</span>)</span>
+          <!-- Mobile Categories Button -->
+          <button id="btn-toggle-mobile-categories" class="btn btn-outline btn-catalog-ctrl btn-mobile-cats" aria-label="Категорії" onclick="window.app.toggleCategoriesDrawer()">
+            <span class="icon">📁</span><span>Категорії</span>
+          </button>
+
+          <!-- Filter Trigger Button (Desktop & Mobile) -->
+          <button id="btn-toggle-filters" class="btn btn-outline btn-catalog-ctrl btn-filter-trigger" aria-label="Фільтри" onclick="window.app.toggleFilters()">
+            <span class="icon">⚡</span><span>Фільтри</span>
+            <span class="filter-count-badge hidden">0</span>
           </button>
 
           <!-- Sorting Dropdown -->
@@ -138,10 +150,10 @@
         </div>
       </div>
 
-      <!-- Main Layout: Sidebar Filters + Products Grid -->
+      <!-- Main Layout: Sidebar Categories Navigation + Products Grid -->
       <div class="catalog-layout">
-        <!-- Faceted Filters Sidebar -->
-        <aside id="filters-sidebar" class="filters-sidebar"></aside>
+        <!-- Categories Navigation Sidebar -->
+        <aside id="categories-sidebar" class="categories-sidebar"></aside>
 
         <!-- Products Grid Container -->
         <div class="products-area">
@@ -266,6 +278,9 @@
 
   <!-- Cart Drawer -->
   <div id="cart-drawer" class="cart-drawer"></div>
+
+  <!-- Filters Offcanvas Drawer -->
+  <div id="filters-drawer" class="filters-drawer"></div>
 
   <!-- Product Quick View Modal -->
   <div id="product-modal" class="modal-container hidden"></div>

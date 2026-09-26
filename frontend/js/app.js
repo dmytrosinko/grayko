@@ -1,7 +1,14 @@
 import { state } from './state.js';
 import { api } from './api.js';
 import { initHeader } from './components/header.js';
-import { renderCategoryPills, renderFiltersSidebar, renderActiveFilterChips } from './components/filters.js';
+import {
+  renderCategoriesSidebar,
+  renderFiltersDrawer,
+  renderActiveFilterChips,
+  updateCatalogHeader,
+  toggleCategoryAccordion,
+  filterCategoriesInSidebar
+} from './components/filters.js';
 import { createProductCard } from './components/productCard.js';
 import { openProductModal } from './components/productModal.js';
 import { renderCartDrawer } from './components/cartDrawer.js';
@@ -16,8 +23,10 @@ class ToysApp {
 
   async init() {
     initHeader();
-    renderFiltersSidebar({});
+    renderCategoriesSidebar(state.categories);
+    renderFiltersDrawer({});
     renderActiveFilterChips();
+    updateCatalogHeader();
 
     // Backdrop click listener to close all modals and drawers
     const backdrop = document.getElementById('modal-backdrop');
@@ -35,7 +44,9 @@ class ToysApp {
       this.pagination.offset = 0;
       this.loadProducts(false);
       renderActiveFilterChips();
-      renderCategoryPills(state.categories);
+      renderCategoriesSidebar(state.categories);
+      renderFiltersDrawer(state.facets || {});
+      updateCatalogHeader();
       this.syncHeroAgePills();
     });
     state.on('cart_updated', () => {
@@ -60,7 +71,8 @@ class ToysApp {
     try {
       const data = await api.getCategories();
       state.setCategories(data.categories || []);
-      renderCategoryPills(state.categories);
+      renderCategoriesSidebar(state.categories);
+      updateCatalogHeader();
     } catch (err) {
       console.error("Failed to load categories:", err);
     }
@@ -111,7 +123,8 @@ class ToysApp {
 
       if (!append) {
         state.facets = data.facets || {};
-        renderFiltersSidebar(state.facets);
+        renderFiltersDrawer(state.facets);
+        renderCategoriesSidebar(state.categories);
       }
 
       if (countLabel) {
@@ -208,19 +221,27 @@ class ToysApp {
       });
     }
 
-    // Mobile filter toggle
-    const mobileFilterBtn = document.getElementById('btn-toggle-mobile-filters');
-    if (mobileFilterBtn) {
-      mobileFilterBtn.addEventListener('click', () => {
+    // Filter toggle button
+    const filterBtn = document.getElementById('btn-toggle-filters');
+    if (filterBtn) {
+      filterBtn.addEventListener('click', () => {
         this.toggleFilters();
+      });
+    }
+
+    // Mobile categories toggle button
+    const mobileCatsBtn = document.getElementById('btn-toggle-mobile-categories');
+    if (mobileCatsBtn) {
+      mobileCatsBtn.addEventListener('click', () => {
+        this.toggleCategoriesDrawer();
       });
     }
   }
 
-  // Global methods accessible from HTML onclick
+  // Filters Drawer (Desktop & Mobile)
   toggleFilters() {
-    const sidebar = document.getElementById('filters-sidebar');
-    if (sidebar && sidebar.classList.contains('mobile-open')) {
+    const drawer = document.getElementById('filters-drawer');
+    if (drawer && drawer.classList.contains('open')) {
       this.closeFilters();
     } else {
       this.openFilters();
@@ -228,28 +249,77 @@ class ToysApp {
   }
 
   openFilters() {
-    const sidebar = document.getElementById('filters-sidebar');
+    const drawer = document.getElementById('filters-drawer');
     const backdrop = document.getElementById('modal-backdrop');
-    if (sidebar) sidebar.classList.add('mobile-open');
+    // Close mobile categories if open
+    this.closeCategoriesDrawer();
+    if (drawer) drawer.classList.add('open');
     if (backdrop) backdrop.classList.remove('hidden');
     this.checkBodyModalOpen();
   }
 
   closeFilters() {
-    const sidebar = document.getElementById('filters-sidebar');
+    const drawer = document.getElementById('filters-drawer');
     const backdrop = document.getElementById('modal-backdrop');
-    if (sidebar) sidebar.classList.remove('mobile-open');
-    if (backdrop && document.querySelectorAll('.modal-container:not(.hidden)').length === 0 && !document.getElementById('cart-drawer')?.classList.contains('open')) {
+    if (drawer) drawer.classList.remove('open');
+    if (backdrop && !this.hasAnyOtherModalOpen()) {
       backdrop.classList.add('hidden');
     }
     this.checkBodyModalOpen();
   }
 
+  // Categories Drawer (Mobile)
+  toggleCategoriesDrawer() {
+    const sidebar = document.getElementById('categories-sidebar');
+    if (sidebar && sidebar.classList.contains('mobile-open')) {
+      this.closeCategoriesDrawer();
+    } else {
+      this.openCategoriesDrawer();
+    }
+  }
+
+  openCategoriesDrawer() {
+    const sidebar = document.getElementById('categories-sidebar');
+    const backdrop = document.getElementById('modal-backdrop');
+    this.closeFilters();
+    if (sidebar) sidebar.classList.add('mobile-open');
+    if (backdrop) backdrop.classList.remove('hidden');
+    this.checkBodyModalOpen();
+  }
+
+  closeCategoriesDrawer() {
+    const sidebar = document.getElementById('categories-sidebar');
+    const backdrop = document.getElementById('modal-backdrop');
+    if (sidebar) sidebar.classList.remove('mobile-open');
+    if (backdrop && !this.hasAnyOtherModalOpen()) {
+      backdrop.classList.add('hidden');
+    }
+    this.checkBodyModalOpen();
+  }
+
+  toggleCategoryAccordion(catId, event) {
+    toggleCategoryAccordion(catId, event);
+  }
+
+  clearCategorySearch() {
+    filterCategoriesInSidebar('');
+  }
+
+  clearPriceFilter() {
+    state.setFilter('min_price', null);
+    state.setFilter('max_price', null);
+  }
+
+  hasAnyOtherModalOpen() {
+    const hasModals = document.querySelectorAll('.modal-container:not(.hidden)').length > 0;
+    const hasCart = document.getElementById('cart-drawer')?.classList.contains('open');
+    const hasFilters = document.getElementById('filters-drawer')?.classList.contains('open');
+    const hasMobileCats = document.getElementById('categories-sidebar')?.classList.contains('mobile-open');
+    return hasModals || hasCart || hasFilters || hasMobileCats;
+  }
+
   checkBodyModalOpen() {
-    const hasOpenModal = document.querySelectorAll('.modal-container:not(.hidden)').length > 0;
-    const hasOpenCart = document.getElementById('cart-drawer')?.classList.contains('open');
-    const hasOpenFilters = document.getElementById('filters-sidebar')?.classList.contains('mobile-open');
-    if (hasOpenModal || hasOpenCart || hasOpenFilters) {
+    if (this.hasAnyOtherModalOpen()) {
       document.body.classList.add('modal-open');
     } else {
       document.body.classList.remove('modal-open');
@@ -257,21 +327,40 @@ class ToysApp {
   }
 
   filterByCategory(catId) {
-    state.setFilter('category', catId);
-    document.getElementById('catalog').scrollIntoView({ behavior: 'smooth' });
+    state.setFilter('category', catId ? parseInt(catId, 10) : null);
+    this.closeCategoriesDrawer();
+    const catalog = document.getElementById('catalog');
+    if (catalog) catalog.scrollIntoView({ behavior: 'smooth' });
   }
 
   filterByBestsellers() {
     state.setFilter('is_bestseller', 1);
-    document.getElementById('catalog').scrollIntoView({ behavior: 'smooth' });
+    const catalog = document.getElementById('catalog');
+    if (catalog) catalog.scrollIntoView({ behavior: 'smooth' });
   }
 
   clearSkillFilter() {
     state.setFilter('skill', null);
   }
 
+  resetFacetFilters() {
+    state.setFilter('in_stock', false);
+    state.setFilter('age_groups', []);
+    state.setFilter('materials', []);
+    state.setFilter('brands', []);
+    state.setFilter('skill', null);
+    state.setFilter('min_price', null);
+    state.setFilter('max_price', null);
+    state.setFilter('q', '');
+    const searchInput = document.getElementById('header-search-input');
+    if (searchInput) searchInput.value = '';
+    this.closeFilters();
+  }
+
   resetFilters() {
     state.resetFilters();
+    this.closeFilters();
+    this.closeCategoriesDrawer();
   }
 
   openProductModal(productId) {
@@ -362,7 +451,7 @@ class ToysApp {
     const drawer = document.getElementById('cart-drawer');
     const backdrop = document.getElementById('modal-backdrop');
     if (drawer) drawer.classList.remove('open');
-    if (backdrop && document.querySelectorAll('.modal-container:not(.hidden)').length === 0 && !document.getElementById('filters-sidebar')?.classList.contains('mobile-open')) {
+    if (backdrop && !this.hasAnyOtherModalOpen()) {
       backdrop.classList.add('hidden');
     }
     this.checkBodyModalOpen();
@@ -377,9 +466,7 @@ class ToysApp {
   closeModal() {
     document.querySelectorAll('.modal-container').forEach(m => m.classList.add('hidden'));
     const backdrop = document.getElementById('modal-backdrop');
-    const drawer = document.getElementById('cart-drawer');
-    const filters = document.getElementById('filters-sidebar');
-    if ((!drawer || !drawer.classList.contains('open')) && (!filters || !filters.classList.contains('mobile-open')) && backdrop) {
+    if (backdrop && !this.hasAnyOtherModalOpen()) {
       backdrop.classList.add('hidden');
     }
     this.checkBodyModalOpen();
@@ -389,6 +476,7 @@ class ToysApp {
     this.closeCart();
     this.closeModal();
     this.closeFilters();
+    this.closeCategoriesDrawer();
     document.body.classList.remove('modal-open');
   }
 

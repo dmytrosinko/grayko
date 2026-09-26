@@ -138,10 +138,23 @@ export const api = {
     return safeFetch(`/api/catalog?${query.toString()}`, {}, () => {
       let products = getLocalProducts().filter(p => p.is_active !== 0);
 
-      // Filter by Category
+      // Filter by Category (including descendants)
       if (params.category) {
         const catId = parseInt(params.category, 10);
-        products = products.filter(p => p.category_id === catId);
+        const allowedCatIds = new Set([catId]);
+        if (state.categories && state.categories.length) {
+          let added = true;
+          while (added) {
+            added = false;
+            for (const c of state.categories) {
+              if (c.parent_id && allowedCatIds.has(c.parent_id) && !allowedCatIds.has(c.id)) {
+                allowedCatIds.add(c.id);
+                added = true;
+              }
+            }
+          }
+        }
+        products = products.filter(p => allowedCatIds.has(p.category_id));
       }
 
       // Filter by Search Query

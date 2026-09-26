@@ -669,26 +669,106 @@ img {
   gap: 12px;
 }
 
-.btn-mobile-filter {
-  display: none;
-  white-space: nowrap;
+.catalog-header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.catalog-breadcrumbs {
+  display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.crumb-link {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.crumb-link:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.crumb-sep {
+  color: #CBD5E1;
+  font-size: 11px;
+}
+
+.crumb-item.current {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.btn-catalog-ctrl {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  padding: 8px 14px;
+  padding: 8px 16px;
   border-radius: var(--radius-md);
   font-weight: 700;
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--text-primary);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
-  transition: var(--transition-fast);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
 }
 
-.btn-mobile-filter:hover {
+.btn-catalog-ctrl:hover {
   border-color: var(--primary);
   color: var(--primary);
+}
+
+.btn-filter-trigger.has-active-filters {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(255, 90, 95, 0.05);
+}
+
+.filter-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: var(--primary);
+  color: white;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.btn-mobile-cats {
+  display: none;
+}
+
+.btn-clear-all-chips {
+  font-size: 12px;
+  font-weight: 700;
+  color: #FF5A5F;
+  margin-left: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-clear-all-chips:hover {
+  text-decoration: underline;
 }
 
 .sort-wrapper {
@@ -1152,16 +1232,19 @@ img {
     align-items: center;
     justify-content: space-between;
   }
-  .btn-mobile-filter {
+  .btn-mobile-cats {
     display: inline-flex;
-    flex: 1 1 45%;
-    min-width: 130px;
+    flex: 1 1 auto;
+    justify-content: center;
+    padding: 10px 12px;
+  }
+  .btn-filter-trigger {
+    flex: 1 1 auto;
     justify-content: center;
     padding: 10px 12px;
   }
   .sort-wrapper {
-    flex: 1 1 50%;
-    min-width: 140px;
+    flex: 1 1 100%;
     padding: 8px 10px;
     justify-content: space-between;
   }
@@ -1176,23 +1259,30 @@ img {
     gap: 16px;
   }
 
-  /* Filter Sidebar Drawer */
-  .filters-sidebar {
-    display: none;
+  /* Mobile Categories Drawer */
+  .categories-sidebar {
     position: fixed;
     top: 0;
     left: 0;
     bottom: 0;
     width: min(340px, 88vw);
     background: var(--bg-card);
-    z-index: 10001;
-    padding: 24px;
+    z-index: 10002;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     box-shadow: var(--shadow-xl);
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  .filters-sidebar.mobile-open {
-    display: block;
+  .categories-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  .categories-sidebar .sidebar-sticky-inner {
+    position: static;
+    max-height: none;
+  }
+  .mobile-sidebar-close-btn {
+    display: inline-flex;
   }
 
   /* Sticky Bottom Navigation */
@@ -1215,7 +1305,7 @@ img {
   .sort-label {
     display: none;
   }
-  .btn-mobile-filter {
+  .btn-catalog-ctrl {
     font-size: 12px;
     padding: 8px 10px;
   }
@@ -1225,4 +1315,24 @@ img {
   .catalog-section {
     padding: 20px 0 40px;
   }
+}
+
+/* ==========================================================================
+   HIDE NETLIFY BADGE & DRAWER
+   ========================================================================== */
+#nl-badge-frame,
+iframe[title*="Powered by Netlify"],
+iframe[title*="Netlify"],
+iframe[id*="nl-badge"],
+#netlify-drawer,
+[data-netlify-drawer] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
+  z-index: -9999 !important;
+  clip: rect(0, 0, 0, 0) !important;
 }

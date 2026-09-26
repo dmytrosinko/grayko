@@ -1,13 +1,17 @@
 <!DOCTYPE html>
 <html lang="uk">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
   <title>GRAYKO | Інтернет-магазин дитячих іграшок в Україні</title>
-  <meta name="description" content="Великий асортимент дитячих іграшок: машинки на радіокеруванні, ляльки, конструктори, набори для творчості, настільні ігри, дерев'яні та розвиваючі іграшки. Швидка доставка Новою Поштою.">
+  <meta name="description"
+    content="Великий асортимент дитячих іграшок: машинки на радіокеруванні, ляльки, конструктори, набори для творчості, настільні ігри, дерев'яні та розвиваючі іграшки. Швидка доставка Новою Поштою.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
   <!-- Favicons & App Icons -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=2">
@@ -31,6 +35,7 @@
     window.addEventListener('load', _cleanNetlify);
   </script>
 </head>
+
 <body>
   <!-- Top Notification Bar -->
   <div class="top-banner">
@@ -49,26 +54,38 @@
   <section class="hero-section">
     <div class="container hero-grid">
       <div class="hero-content">
-        <div class="hero-badge">
-          <span class="badge-icon">🧸</span> Усі види іграшок для дітей від 0 до 16+ років
-        </div>
+
         <h1 class="hero-title">
           Світ дитячих іграшок для <span class="gradient-text">радості, гри та розвитку</span>
         </h1>
         <p class="hero-subtitle">
-          Машинки на радіокеруванні, ляльки, сюжетно-рольові кухні, конструктори, творчі набори, самокати, настільні ігри та розвиваючі іграшки для будь-якого віку.
+          Машинки на радіокеруванні, ляльки, сюжетно-рольові кухні, конструктори, творчі набори, самокати, настільні
+          ігри та розвиваючі іграшки для будь-якого віку.
         </p>
-        
-        <!-- Age Quick-Pills Filter -->
+
+        <!-- Age & Seasonal Categories Quick Navigation -->
         <div class="hero-age-picker">
-          <span class="picker-label">Підбір за віком дитини:</span>
-          <div class="age-pills-list">
-            <button class="age-pill" data-age="0-1 рік">0–1 рік</button>
-            <button class="age-pill" data-age="1-3 роки">1–3 роки</button>
-            <button class="age-pill" data-age="3-5 років">3–5 років</button>
-            <button class="age-pill" data-age="6-8 років">6–8 років</button>
-            <button class="age-pill" data-age="9-12 років">9–12 років</button>
-            <button class="age-pill" data-age="14+">14+ років</button>
+          <div class="picker-group">
+            <span class="picker-label">Підбір за віком дитини:</span>
+            <div class="age-pills-list">
+              <button class="age-pill" data-age="0-1 рік">0–1 рік</button>
+              <button class="age-pill" data-age="1-3 роки">1–3 роки</button>
+              <button class="age-pill" data-age="3-5 років">3–5 років</button>
+              <button class="age-pill" data-age="6-8 років">6–8 років</button>
+              <button class="age-pill" data-age="9-12 років">9–12 років</button>
+              <button class="age-pill" data-age="14+">14+ років</button>
+            </div>
+          </div>
+
+          <div class="hero-picker-divider"></div>
+
+          <div class="picker-group">
+            <div class="picker-label-row">
+              <span class="picker-label">Актуальні сезонні категорії:</span>
+            </div>
+            <div class="seasonal-pills-list" id="hero-seasonal-pills">
+              <!-- Dynamically populated by JS based on current calendar date & categories -->
+            </div>
           </div>
         </div>
 
@@ -76,9 +93,11 @@
       </div>
 
       <div class="hero-showcase" id="hero-showcase-container">
-        <div class="showcase-card showcase-main" id="hero-showcase-card" onclick="window.app.openProductModal(16984)" style="cursor: pointer;" title="Натисніть для перегляду та покупки">
+        <div class="showcase-card showcase-main" id="hero-showcase-card" onclick="window.app.openProductModal(16984)"
+          style="cursor: pointer;" title="Натисніть для перегляду та покупки">
           <div class="showcase-tag">🔥 ТОП ХАЙП • Хіт продажів</div>
-          <img src="https://toysi.ua/p/enl_306141.jpg" alt="Трейлер інерційний + 2 машинки Тачки" class="showcase-img" id="hero-showcase-img">
+          <img src="https://toysi.ua/p/enl_306141.jpg" alt="Трейлер інерційний + 2 машинки Тачки" class="showcase-img"
+            id="hero-showcase-img">
           <div class="showcase-info">
             <span class="showcase-brand" id="hero-showcase-brand">MIC</span>
             <h3 id="hero-showcase-title">Трейлер інерційний + 2 машинки "Тачки"</h3>
@@ -151,9 +170,12 @@
           </div>
 
           <!-- Pagination / Load More -->
-          <div id="pagination-container" class="pagination-wrapper" style="text-align: center; margin: 36px 0; display: none;">
-            <div id="pagination-info" style="font-size: 14px; color: #64748B; margin-bottom: 12px; font-weight: 500;"></div>
-            <button id="btn-load-more" class="btn btn-outline" style="min-width: 260px; border-radius: 99px; font-weight: 700; padding: 12px 28px; border: 2px solid #5BC0BE; color: #5BC0BE; background: transparent; cursor: pointer; transition: all 0.2s;">
+          <div id="pagination-container" class="pagination-wrapper"
+            style="text-align: center; margin: 36px 0; display: none;">
+            <div id="pagination-info" style="font-size: 14px; color: #64748B; margin-bottom: 12px; font-weight: 500;">
+            </div>
+            <button id="btn-load-more" class="btn btn-outline"
+              style="min-width: 260px; border-radius: 99px; font-weight: 700; padding: 12px 28px; border: 2px solid #5BC0BE; color: #5BC0BE; background: transparent; cursor: pointer; transition: all 0.2s;">
               Завантажити ще товари ▾
             </button>
           </div>
@@ -177,7 +199,8 @@
         <div class="feature-card">
           <div class="feature-icon">🧸</div>
           <h3>Повний асортимент</h3>
-          <p>Від брязкалець для немовлят та інтерактивних ляльок до радіокерованих всюдиходів, сюжетних кухонь і складних 3D моделей.</p>
+          <p>Від брязкалець для немовлят та інтерактивних ляльок до радіокерованих всюдиходів, сюжетних кухонь і
+            складних 3D моделей.</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">🛡️</div>
@@ -187,12 +210,14 @@
         <div class="feature-card">
           <div class="feature-icon">📦</div>
           <h3>Швидка доставка</h3>
-          <p>Щоденне відвантаження з центрального складу. Надійне пакування та швидка доставка Новою Поштою за 1–2 дні.</p>
+          <p>Щоденне відвантаження з центрального складу. Надійне пакування та швидка доставка Новою Поштою за 1–2 дні.
+          </p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">💳</div>
           <h3>Зручна онлайн-оплата</h3>
-          <p>Безпечна онлайн-оплата картою Visa / Mastercard, Apple Pay, Google Pay без комісії. Швидка передоплата та моментальна передача замовлення на склад.</p>
+          <p>Безпечна онлайн-оплата картою Visa / Mastercard, Apple Pay, Google Pay без комісії. Швидка передоплата та
+            моментальна передача замовлення на склад.</p>
         </div>
       </div>
     </div>
@@ -207,24 +232,15 @@
           <span class="logo-text">GRAYKO <span>TOYS</span></span>
         </div>
         <p class="footer-desc">
-          Сучасний інтернет-магазин дитячих іграшок, інтерактивних розваг, творчості та розвиваючих наборів для дітей різного віку.
+          Сучасний інтернет-магазин дитячих іграшок, інтерактивних розваг, творчості та розвиваючих наборів для дітей
+          різного віку.
         </p>
         <div class="footer-legal">
           ФОП 3 група (КВЕД 47.91, 46.19, 47.65) | м. Київ
         </div>
       </div>
 
-      <div class="footer-col">
-        <h4>Категорії каталогу</h4>
-        <ul class="footer-links">
-          <li><a href="#catalog" onclick="window.app.filterByCategory(1)">Машинки та радіокерування</a></li>
-          <li><a href="#catalog" onclick="window.app.filterByCategory(2)">Ляльки та м'які іграшки</a></li>
-          <li><a href="#catalog" onclick="window.app.filterByCategory(3)">Конструктори та 3D-пазли</a></li>
-          <li><a href="#catalog" onclick="window.app.filterByCategory(7)">Творчість та ліплення</a></li>
-          <li><a href="#catalog" onclick="window.app.filterByCategory(8)">Сюжетно-рольові набори</a></li>
-          <li><a href="#catalog" onclick="window.app.filterByCategory(10)">Активні ігри та самокати</a></li>
-        </ul>
-      </div>
+
 
       <div class="footer-col">
         <h4>Клієнтам</h4>
@@ -235,22 +251,15 @@
       </div>
 
       <div class="footer-col contact-col">
-        <h4>Контакти та склади</h4>
-        <p class="contact-item">📞 <a href="tel:+380975150055">+38 (097) 515-00-55</a></p>
-        <p class="contact-item">📍 Склад відвантаження: м. Київ, вул. Алма-Атинська, 35а</p>
+        <h4>Контакти</h4>
+        <p class="contact-item">📞 <a href="tel:+380968471274">+38 (096) 847-1274</a></p>
         <div class="work-hours">Пн-Пт: 09:00 - 18:00 (Відвантаження щодня)</div>
       </div>
     </div>
     <div class="footer-bottom">
       <div class="container footer-bottom-inner">
         <p>&copy; 2026 GRAYKO Toys e-Commerce Platform. Усі права захищено.</p>
-        <div class="payment-badges">
-          <span>Mastercard</span>
-          <span>Visa</span>
-          <span>Apple Pay</span>
-          <span>Google Pay</span>
-          <span>Онлайн-передоплата</span>
-        </div>
+
       </div>
     </div>
   </footer>
@@ -293,4 +302,5 @@
   <!-- App Scripts -->
   <script type="module" src="/js/app.js"></script>
 </body>
+
 </html>

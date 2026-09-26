@@ -423,14 +423,47 @@ img {
   margin-bottom: 28px;
 }
 
-/* Hero Age Picker */
+/* Hero Age & Seasonal Quick Navigation */
 .hero-age-picker {
   background: var(--bg-card);
-  padding: 16px 20px;
-  border-radius: var(--radius-md);
+  padding: 18px 22px;
+  border-radius: var(--radius-lg, 16px);
   border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   margin-bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.picker-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.picker-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.picker-label-row .picker-label {
+  margin-bottom: 0;
+}
+
+.seasonal-trend-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #e03e48;
+  background: #fff1f2;
+  border: 1px solid #ffe4e6;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .picker-label {
@@ -441,6 +474,13 @@ img {
   letter-spacing: 0.5px;
   color: var(--text-muted);
   margin-bottom: 10px;
+}
+
+.hero-picker-divider {
+  height: 1px;
+  background: var(--border-color);
+  opacity: 0.6;
+  margin: 2px 0;
 }
 
 .age-pills-list {
@@ -458,6 +498,7 @@ img {
   font-size: 13px;
   font-weight: 600;
   transition: var(--transition-fast);
+  cursor: pointer;
 }
 
 .age-pill:hover, .age-pill.active {
@@ -465,6 +506,118 @@ img {
   color: white;
   border-color: var(--primary);
   transform: translateY(-1px);
+}
+
+.seasonal-pills-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.seasonal-cat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-alt);
+  border: 1.5px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 7px 16px;
+  border-radius: var(--radius-full);
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.seasonal-cat-pill:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.seasonal-cat-pill .pill-emoji {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.seasonal-cat-pill .pill-tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text-secondary);
+}
+
+/* Seasonal pill themes */
+.seasonal-cat-pill.pill-halloween:hover {
+  border-color: #ea580c;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.seasonal-cat-pill.pill-halloween.active {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  border-color: #ea580c;
+  color: white;
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
+}
+
+.seasonal-cat-pill.pill-autumn:hover {
+  border-color: #0284c7;
+  background: #f0f9ff;
+  color: #0369a1;
+}
+
+.seasonal-cat-pill.pill-autumn.active {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  border-color: #0284c7;
+  color: white;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+}
+
+.seasonal-cat-pill.pill-seasonal:hover {
+  border-color: #d97706;
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.seasonal-cat-pill.pill-seasonal.active {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  border-color: #d97706;
+  color: white;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.35);
+}
+
+.seasonal-cat-pill.pill-winter:hover {
+  border-color: #0284c7;
+  background: #f0f9ff;
+  color: #0369a1;
+}
+
+.seasonal-cat-pill.pill-winter.active {
+  background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+  border-color: #0284c7;
+  color: white;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+}
+
+.seasonal-cat-pill.pill-summer:hover {
+  border-color: #eab308;
+  background: #fefce8;
+  color: #854d0e;
+}
+
+.seasonal-cat-pill.pill-summer.active {
+  background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+  border-color: #d97706;
+  color: white;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.35);
+}
+
+.seasonal-cat-pill.active .pill-tag {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
 }
 
 .hero-actions {
@@ -937,8 +1090,8 @@ img {
 
 .footer-grid {
   display: grid;
-  grid-template-columns: 2fr 1.2fr 1fr 1.4fr;
-  gap: 40px;
+  grid-template-columns: 2fr 1.2fr 1.5fr;
+  gap: 48px;
   margin-bottom: 48px;
 }
 
@@ -1022,8 +1175,9 @@ img {
 
 .footer-bottom-inner {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
+  text-align: center;
   flex-wrap: wrap;
   gap: 16px;
   font-size: 13px;

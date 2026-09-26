@@ -48,6 +48,7 @@ class ToysApp {
       renderFiltersDrawer(state.facets || {});
       updateCatalogHeader();
       this.syncHeroAgePills();
+      this.syncHeroSeasonalPills();
     });
     state.on('cart_updated', () => {
       const drawer = document.getElementById('cart-drawer');
@@ -72,10 +73,160 @@ class ToysApp {
       const data = await api.getCategories();
       state.setCategories(data.categories || []);
       renderCategoriesSidebar(state.categories);
+      this.renderHeroSeasonalPills();
       updateCatalogHeader();
     } catch (err) {
       console.error("Failed to load categories:", err);
     }
+  }
+
+  renderHeroSeasonalPills() {
+    const container = document.getElementById('hero-seasonal-pills');
+    if (!container) return;
+
+    const categories = state.categories || [];
+    const now = new Date();
+    const month = now.getMonth(); // 0 = Jan, 8 = Sep, 9 = Oct, 10 = Nov, 11 = Dec
+    const day = now.getDate();
+
+    const findCat = (id, pattern) => {
+      return categories.find(c => c.id === id) || 
+             categories.find(c => pattern && pattern.test(c.name_uk || ''));
+    };
+
+    const pills = [];
+
+    // 1. Halloween (Геловін): Active in Autumn before & around Halloween (Sep 1 - Nov 5)
+    const isHalloweenSeason = (month === 8 || month === 9 || (month === 10 && day <= 5));
+    if (isHalloweenSeason) {
+      const halloweenCat = findCat(99186, /геловін|хелловін|хеловін/i);
+      pills.push({
+        id: halloweenCat ? halloweenCat.id : 99186,
+        name: 'Хелловін',
+        icon: '🎃',
+        tag: 'Хіт сезону',
+        className: 'pill-halloween'
+      });
+    }
+
+    // 2. Current season category & subcategories:
+    // Autumn: September (8), October (9), November (10)
+    if (month >= 8 && month <= 10) {
+      // Subcategory of seasonal: Parasols & Raincoats (Парасольки та дощовики)
+      const umbrellaCat = findCat(98889, /парасольк|дощовик/i);
+      if (umbrellaCat) {
+        pills.push({
+          id: umbrellaCat.id,
+          name: 'Парасольки та дощовики',
+          icon: '☔',
+          tag: 'Осінь',
+          className: 'pill-autumn'
+        });
+      }
+
+      // Root/General Autumn category (Осінь і весна)
+      const autumnCat = findCat(99228, /осінь/i) || findCat(98883, /сезонн/i);
+      if (autumnCat) {
+        pills.push({
+          id: autumnCat.id,
+          name: 'Осінні сезонні товари',
+          icon: '🍂',
+          className: 'pill-seasonal'
+        });
+      }
+
+      // Late autumn (Nov 15+): add New Year preview
+      if (month === 10 && day >= 15) {
+        const nyCat = findCat(98896, /новорічн/i);
+        if (nyCat) {
+          pills.push({
+            id: nyCat.id,
+            name: 'Новорічні свята',
+            icon: '🎄',
+            tag: 'Скоро',
+            className: 'pill-winter'
+          });
+        }
+      }
+    }
+    // Winter: December (11), January (0), February (1)
+    else if (month === 11 || month === 0 || month === 1) {
+      const nyCat = findCat(98896, /новорічн/i);
+      if (nyCat) {
+        pills.push({
+          id: nyCat.id,
+          name: 'Новорічні товари та декор',
+          icon: '🎄',
+          tag: 'Зимові свята',
+          className: 'pill-winter'
+        });
+      }
+      const winterCat = findCat(99226, /зима/i) || findCat(98883, /сезонн/i);
+      if (winterCat) {
+        pills.push({
+          id: winterCat.id,
+          name: 'Зимові товари та розваги',
+          icon: '❄️',
+          className: 'pill-winter'
+        });
+      }
+    }
+    // Spring: March (2), April (3), May (4)
+    else if (month >= 2 && month <= 4) {
+      const springCat = findCat(99228, /весна/i) || findCat(99064, /транспорт/i);
+      if (springCat) {
+        pills.push({
+          id: springCat.id,
+          name: 'Весняні ігри на вулиці',
+          icon: '🌱',
+          className: 'pill-seasonal'
+        });
+      }
+    }
+    // Summer: June (5), July (6), August (7)
+    else {
+      const summerCat = findCat(99227, /літо/i) || findCat(98883, /сезонн/i);
+      if (summerCat) {
+        pills.push({
+          id: summerCat.id,
+          name: 'Літні товари та пляж',
+          icon: '☀️',
+          className: 'pill-summer'
+        });
+      }
+      const bubbleCat = findCat(98888, /бульбашк/i);
+      if (bubbleCat) {
+        pills.push({
+          id: bubbleCat.id,
+          name: 'Мильні бульбашки',
+          icon: '🫧',
+          className: 'pill-summer'
+        });
+      }
+    }
+
+    const currentCatId = state.filters.category ? parseInt(state.filters.category, 10) : null;
+
+    container.innerHTML = pills.map(p => `
+      <button 
+        class="seasonal-cat-pill ${p.className || ''} ${currentCatId === p.id ? 'active' : ''}" 
+        data-category-id="${p.id}"
+        onclick="window.app.toggleSeasonalCategory(${p.id})"
+        title="Переглянути категорію: ${p.name}"
+      >
+        <span class="pill-emoji">${p.icon}</span>
+        <span>${p.name}</span>
+        ${p.tag ? `<span class="pill-tag">${p.tag}</span>` : ''}
+      </button>
+    `).join('');
+  }
+
+  syncHeroSeasonalPills() {
+    const activeCatId = state.filters.category ? parseInt(state.filters.category, 10) : null;
+    document.querySelectorAll('.seasonal-cat-pill').forEach(btn => {
+      const catId = parseInt(btn.dataset.categoryId, 10);
+      btn.classList.toggle('active', activeCatId === catId);
+    });
   }
 
   async loadProducts(append = false) {
@@ -331,6 +482,16 @@ class ToysApp {
     this.closeCategoriesDrawer();
     const catalog = document.getElementById('catalog');
     if (catalog) catalog.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  toggleSeasonalCategory(catId) {
+    const currentCatId = state.filters.category ? parseInt(state.filters.category, 10) : null;
+    const targetId = parseInt(catId, 10);
+    if (currentCatId === targetId) {
+      this.filterByCategory(null);
+    } else {
+      this.filterByCategory(targetId);
+    }
   }
 
   filterByBestsellers() {

@@ -408,7 +408,9 @@ class ToysApp {
           img.src = topProduct.images[0];
           img.alt = topProduct.title_uk;
         }
-        if (brand) brand.textContent = topProduct.brand || 'TOYSI';
+        const rawShowcaseBrand = (topProduct.brand || '').trim();
+        const displayShowcaseBrand = (!rawShowcaseBrand || /тойсі|toysi/i.test(rawShowcaseBrand)) ? 'MIC' : rawShowcaseBrand;
+        if (brand) brand.textContent = displayShowcaseBrand;
         if (title) title.textContent = topProduct.title_uk;
         if (price) price.textContent = `${topProduct.price} грн`;
         if (chip1) chip1.textContent = topProduct.age_group ? `👶 ${topProduct.age_group}` : '🔥 Хіт';

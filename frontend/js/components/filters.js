@@ -292,25 +292,31 @@ export function renderFiltersDrawer(facets = {}) {
       </div>
 
       <!-- Brands with search if many -->
-      <div class="filter-group">
-        <div class="filter-group-title">
-          <span>🏷️ Бренд</span>
-          ${state.filters.brands.length ? `<span class="filter-selected-count">(${state.filters.brands.length})</span>` : ''}
-        </div>
-        ${brands.length > 7 ? `
-          <div class="filter-subsearch-wrap">
-            <input type="text" id="brand-filter-search" class="filter-subsearch-input" placeholder="Пошук бренду..." autocomplete="off">
+      ${(() => {
+        const validBrands = brands.filter(b => b && !/^(тойсі|toysi|країна іграшок|еко-іграшки)$/i.test(b.trim()));
+        if (!validBrands.length) return '';
+        return `
+          <div class="filter-group">
+            <div class="filter-group-title">
+              <span>🏷️ Бренд</span>
+              ${state.filters.brands.length ? `<span class="filter-selected-count">(${state.filters.brands.length})</span>` : ''}
+            </div>
+            ${validBrands.length > 7 ? `
+              <div class="filter-subsearch-wrap">
+                <input type="text" id="brand-filter-search" class="filter-subsearch-input" placeholder="Пошук бренду..." autocomplete="off">
+              </div>
+            ` : ''}
+            <div class="filter-options-list" id="brand-options-list">
+              ${validBrands.map(brand => `
+                <label class="custom-checkbox brand-item" data-brand="${brand.toLowerCase()}">
+                  <input type="checkbox" class="filter-brand-cb" value="${brand}" ${state.filters.brands.includes(brand) ? 'checked' : ''}>
+                  <span>${brand}</span>
+                </label>
+              `).join('')}
+            </div>
           </div>
-        ` : ''}
-        <div class="filter-options-list" id="brand-options-list">
-          ${brands.map(brand => `
-            <label class="custom-checkbox brand-item" data-brand="${brand.toLowerCase()}">
-              <input type="checkbox" class="filter-brand-cb" value="${brand}" ${state.filters.brands.includes(brand) ? 'checked' : ''}>
-              <span>${brand}</span>
-            </label>
-          `).join('')}
-        </div>
-      </div>
+        `;
+      })()}
 
       <!-- Materials -->
       <div class="filter-group">

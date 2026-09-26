@@ -213,7 +213,7 @@ def parse_description_metadata(desc_html, title_uk="", category_id=None):
             specs[k_clean] = v_clean
             
     if not brand:
-        brand = "Тойсі"
+        brand = None
     if not material:
         material = "безпечний пластик"
     if not age_group:
@@ -262,10 +262,10 @@ def seed_database():
     cursor.execute("DELETE FROM suppliers")
     cursor.execute("DELETE FROM sqlite_sequence")
     
-    # 1. Insert Toysi Supplier
+    # 1. Insert Central Warehouse Supplier
     cursor.execute("""
     INSERT INTO suppliers (id, name, code, warehouse_city, warehouse_address, feed_url, feed_type, settlement_terms, deposit_balance, free_packing_threshold, packing_fee)
-    VALUES (1, 'Центральний склад Тойсі', 'TOYSI_UA', 'Київ', 'вул. Алма-Атинська, 35а', ?, 'YML', 'Відвантаження щодня Новою Поштою. Дропшипінг за передоплатою.', 15000.0, 1000.0, 15.0)
+    VALUES (1, 'Центральний склад Київ', 'CENTRAL_KYIV', 'Київ', 'вул. Алма-Атинська, 35а', ?, 'YML', 'Відвантаження щодня Новою Поштою. Дропшипінг за передоплатою.', 15000.0, 1000.0, 15.0)
     """, (get_feed_url(),))
     supplier_id = 1
     

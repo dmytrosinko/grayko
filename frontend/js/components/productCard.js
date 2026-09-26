@@ -11,6 +11,9 @@ export function createProductCard(product) {
 
   const skillsList = Array.isArray(product.skills_developed) ? product.skills_developed : [];
 
+  const rawBrand = (product.brand || '').trim();
+  const displayBrand = (!rawBrand || /^(тойсі|toysi|країна іграшок|еко-іграшки)$/i.test(rawBrand)) ? null : rawBrand;
+
   const card = document.createElement('div');
   card.className = 'product-card';
   card.style.cursor = 'pointer';
@@ -32,8 +35,8 @@ export function createProductCard(product) {
     </div>
 
     <div class="card-body">
-      <div class="card-meta-top">
-        <span class="card-brand">${product.brand || 'Еко-іграшки'}</span>
+      <div class="card-meta-top" style="${!displayBrand ? 'justify-content: flex-end;' : ''}">
+        ${displayBrand ? `<span class="card-brand">${displayBrand}</span>` : ''}
         <span class="card-sku">${product.internal_sku}</span>
       </div>
 

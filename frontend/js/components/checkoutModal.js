@@ -43,7 +43,11 @@ export async function openCheckoutModal() {
         <div style="background: #FFFBEB; border: 1px solid #FEF3C7; border-radius: 8px; padding: 12px; margin-bottom: 20px; font-size: 13px; color: #92400E;">
           <strong>📦 Ваше замовлення буде відправлено ${shipments.length} окремими посилками:</strong>
           <ul style="margin: 6px 0 0 18px;">
-            ${shipments.map(s => `<li>${s.supplier_name} (м. ${s.warehouse_city}) — ${s.items.length} тов.</li>`).join('')}
+            ${shipments.map(s => {
+              const clean = (s.supplier_name || 'Центральний склад').replace(/тойсі|toysi/gi, '').trim();
+              const name = clean.toLowerCase().includes((s.warehouse_city || '').toLowerCase()) ? clean : `${clean} (м. ${s.warehouse_city})`;
+              return `<li>${name} — ${s.items.length} тов.</li>`;
+            }).join('')}
           </ul>
           <small>Для кожного відправлення автоматично генерується окрема ТТН Нової Пошти.</small>
         </div>

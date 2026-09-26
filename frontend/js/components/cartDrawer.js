@@ -63,7 +63,7 @@ export async function renderCartDrawer() {
           <div class="warehouse-package-box">
             <div class="package-header">
               <span class="package-title">
-                📦 Відправлення ${idx + 1}: ${sh.supplier_name}
+                📦 Відправлення ${idx + 1}: ${(sh.supplier_name || 'Центральний склад').replace(/тойсі|toysi/gi, '').trim()}
               </span>
               <span class="package-city-tag">м. ${sh.warehouse_city}</span>
             </div>

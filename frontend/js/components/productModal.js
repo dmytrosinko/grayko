@@ -28,10 +28,29 @@ export function openProductModal(productId) {
     const specs = product.specifications || {};
     const skills = Array.isArray(product.skills_developed) ? product.skills_developed : [];
 
+    // If manufacturer is not provided, do not display brand at all
+    const rawBrand = (product.brand || '').trim();
+    const cleanBrand = (!rawBrand || /^(тойсі|toysi|країна іграшок)$/i.test(rawBrand)) ? null : rawBrand;
+
+    // Clean warehouse display: "Центральний склад Київ"
+    let supplierDisplayName = (product.supplier_name || 'Центральний склад')
+      .replace(/тойсі|toysi/gi, '')
+      .replace(/\s*\(\s*київ\s*\)/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!supplierDisplayName) supplierDisplayName = 'Центральний склад';
+    if (!supplierDisplayName.toLowerCase().includes('київ') && (product.supplier_city || '').toLowerCase().includes('київ')) {
+      supplierDisplayName += ' Київ';
+    } else if (product.supplier_city && !supplierDisplayName.toLowerCase().includes(product.supplier_city.toLowerCase())) {
+      supplierDisplayName += ` (${product.supplier_city})`;
+    }
+
     modalContainer.innerHTML = `
       <div class="modal-header">
         <div>
-          <span style="font-size: 11px; font-weight: 800; color: #0D9488; text-transform: uppercase;">${product.brand} | ${product.internal_sku}</span>
+          <span style="font-size: 11px; font-weight: 800; color: #0D9488; text-transform: uppercase;">
+            ${cleanBrand ? `${cleanBrand} | ` : ''}${product.internal_sku}
+          </span>
           <h2 style="font-size: 20px; margin-top: 2px;">${product.title_uk}</h2>
         </div>
         <button class="btn-close-drawer" onclick="window.app.closeModal()">✕</button>
@@ -54,7 +73,7 @@ export function openProductModal(productId) {
             <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px; font-size: 12px; margin-top: 8px;">
               <strong style="color: #0F172A;">🏢 Склад відвантаження:</strong>
               <div style="color: #475569; margin-top: 2px;">
-                ${product.supplier_name} (${product.supplier_city})
+                ${supplierDisplayName}
               </div>
               <div style="color: #10B981; font-weight: 700; margin-top: 4px;">
                 ✓ На складі: ${product.stock_quantity} шт. (Готово до відправки)
@@ -84,7 +103,6 @@ export function openProductModal(productId) {
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                   <span style="font-size: 26px; font-weight: 800; color: #FF5A5F;">${product.price} грн</span>
-                  <div style="font-size: 11px; color: #64748B;">Офіційна роздрібна ціна</div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <div class="qty-control" style="background: white; border: 1px solid #E2E8F0;">
@@ -116,7 +134,7 @@ export function openProductModal(productId) {
             <strong style="display: block; font-size: 13px; margin-bottom: 6px;">📋 Характеристики:</strong>
             <table class="specs-table">
               <tr><td>Матеріал</td><td>${product.material || 'Дерево'}</td></tr>
-              ${product.assembly_time_mins > 0 ? `<tr><td>Орієнтовний час складання</td><td>~${Math.round(product.assembly_time_mins/60)} год.</td></tr>` : ''}
+              ${product.assembly_time_mins > 0 ? `<tr><td>Орієнтовний час складання</td><td>~${Math.round(product.assembly_time_mins / 60)} год.</td></tr>` : ''}
               ${Object.entries(specs).map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}
             </table>
           </div>

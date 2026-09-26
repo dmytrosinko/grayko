@@ -543,4 +543,76 @@ export function updateCatalogHeader() {
       titleEl.innerHTML = `<span>${currentCat.icon || '📦'}</span> ${currentCat.name_uk}`;
     }
   }
+
+  // Check if a modal is currently open (product modal has precedence)
+  const productModal = document.getElementById('product-modal');
+  const isProductModalOpen = productModal && !productModal.classList.contains('hidden');
+
+  if (!isProductModalOpen) {
+    const descMeta = document.querySelector('meta[name="description"]');
+    const canonicalLink = document.getElementById('canonical-url');
+
+    if (path.length > 0) {
+      const activeCat = path[path.length - 1];
+      document.title = `${activeCat.name_uk} — купити в інтернет-магазині GRAYKO TOYS`;
+      if (descMeta) {
+        descMeta.setAttribute('content', `Купити ${activeCat.name_uk.toLowerCase()} в інтернет-магазині GRAYKO. Великий вибір якісних дитячих іграшок, швидка доставка Новою Поштою за 1-2 дні по всій Україні, гарантія якості.`);
+      }
+      if (canonicalLink) {
+        canonicalLink.setAttribute('href', `https://grayko.ua/?category=${activeCat.id}`);
+      }
+      if (window.location.search !== `?category=${activeCat.id}`) {
+        window.history.replaceState({ category: activeCat.id }, '', `${window.location.pathname}?category=${activeCat.id}`);
+      }
+    } else if (state.filters.q) {
+      document.title = `Пошук "${state.filters.q}" — інтернет-магазин дитячих іграшок GRAYKO`;
+      if (descMeta) {
+        descMeta.setAttribute('content', `Результати пошуку за запитом "${state.filters.q}" в інтернет-магазині GRAYKO TOYS. Швидка доставка Новою Поштою по всій Україні.`);
+      }
+      window.history.replaceState({ q: state.filters.q }, '', `${window.location.pathname}?q=${encodeURIComponent(state.filters.q)}`);
+    } else {
+      document.title = `GRAYKO | Інтернет-магазин дитячих іграшок в Україні — купити іграшки за найкращими цінами`;
+      if (descMeta) {
+        descMeta.setAttribute('content', `Купити якісні дитячі іграшки в інтернет-магазині GRAYKO з швидкою доставкою по всій Україні: радіокеровані машинки, розвиваючі набори Монтессорі, ляльки, конструктори, настільні ігри та творчість. Офіційні ціни, гарантія якості.`);
+      }
+      if (canonicalLink) {
+        canonicalLink.setAttribute('href', `https://grayko.ua/`);
+      }
+      if (window.location.search && !window.location.search.includes('product=')) {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+
+    // Update Schema.org BreadcrumbList
+    const breadcrumbSchemaEl = document.getElementById('breadcrumb-schema');
+    if (breadcrumbSchemaEl) {
+      const listElements = [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Головна",
+          "item": "https://grayko.ua/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Каталог іграшок",
+          "item": "https://grayko.ua/#catalog"
+        }
+      ];
+      path.forEach((cat, idx) => {
+        listElements.push({
+          "@type": "ListItem",
+          "position": 3 + idx,
+          "name": cat.name_uk,
+          "item": `https://grayko.ua/?category=${cat.id}`
+        });
+      });
+      breadcrumbSchemaEl.textContent = JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": listElements
+      }, null, 2);
+    }
+  }
 }

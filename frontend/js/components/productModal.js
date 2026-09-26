@@ -32,6 +32,55 @@ export function openProductModal(productId) {
     const rawBrand = (product.brand || '').trim();
     const cleanBrand = (!rawBrand || /^(тойсі|toysi|країна іграшок)$/i.test(rawBrand)) ? null : rawBrand;
 
+    // Dynamic SEO optimization for product view
+    document.title = `${product.title_uk} — купити за ${product.price} грн | Інтернет-магазин GRAYKO TOYS`;
+    const descMeta = document.querySelector('meta[name="description"]');
+    if (descMeta) {
+      descMeta.setAttribute('content', `${product.title_uk}. Ціна: ${product.price} грн. Швидка відправка Новою Поштою по всій Україні за 1-2 дні. Офіційна гарантія. Замовляйте онлайн в GRAYKO.`);
+    }
+    const canonicalLink = document.getElementById('canonical-url');
+    if (canonicalLink) {
+      canonicalLink.setAttribute('href', `https://grayko.ua/?product=${product.id}`);
+    }
+    if (!window.location.search.includes(`product=${product.id}`)) {
+      window.history.pushState({ product: product.id }, '', `${window.location.pathname}?product=${product.id}`);
+    }
+
+    // Inject Schema.org Product structured data
+    let productSchemaScript = document.getElementById('product-schema-ld');
+    if (!productSchemaScript) {
+      productSchemaScript = document.createElement('script');
+      productSchemaScript.id = 'product-schema-ld';
+      productSchemaScript.type = 'application/ld+json';
+      document.head.appendChild(productSchemaScript);
+    }
+    productSchemaScript.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": product.title_uk,
+      "image": images,
+      "description": product.description_uk || product.title_uk,
+      "sku": product.internal_sku,
+      "mpn": product.supplier_sku || product.internal_sku,
+      "brand": {
+        "@type": "Brand",
+        "name": cleanBrand || "GRAYKO"
+      },
+      "offers": {
+        "@type": "Offer",
+        "url": `https://grayko.ua/?product=${product.id}`,
+        "priceCurrency": "UAH",
+        "price": product.price,
+        "priceValidUntil": "2027-12-31",
+        "itemCondition": "https://schema.org/NewCondition",
+        "availability": product.stock_quantity > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+        "seller": {
+          "@type": "Organization",
+          "name": "GRAYKO TOYS"
+        }
+      }
+    }, null, 2);
+
     // Clean warehouse display: "Центральний склад Київ"
     let supplierDisplayName = (product.supplier_name || 'Центральний склад')
       .replace(/тойсі|toysi/gi, '')
@@ -44,6 +93,28 @@ export function openProductModal(productId) {
     } else if (product.supplier_city && !supplierDisplayName.toLowerCase().includes(product.supplier_city.toLowerCase())) {
       supplierDisplayName += ` (${product.supplier_city})`;
     }
+
+    // Complexity / Difficulty badge is ONLY for puzzles, constructors, 3D models, and brainteasers
+    const cat = (state.categories || []).find(c => c.id === product.category_id);
+    const catName = `${cat ? cat.name_uk : ''} ${product.category_name || ''}`.toLowerCase();
+    const title = (product.title_uk || '').toLowerCase();
+    const isPuzzleOrConstructor = [
+      'конструктор',
+      'пазл',
+      'головоломк',
+      '3d-пазл',
+      '3д-пазл',
+      '3d пазл',
+      'ugears',
+      'wood trick',
+      'lego',
+      'лего',
+      'збірн',
+      'моделюван',
+      'румбокс'
+    ].some(kw => catName.includes(kw) || title.includes(kw));
+
+    const showDifficulty = isPuzzleOrConstructor && product.difficulty_level;
 
     modalContainer.innerHTML = `
       <div class="modal-header">
@@ -91,7 +162,7 @@ export function openProductModal(productId) {
                   ⚙️ ${product.parts_count} деталей
                 </span>
               ` : ''}
-              ${product.difficulty_level ? `
+              ${showDifficulty ? `
                 <span class="skill-tag" style="background:#E0E7FF; color:#3730A3; font-size:12px; padding:4px 10px;">
                   🎯 Складність: ${product.difficulty_level}
                 </span>
@@ -135,7 +206,9 @@ export function openProductModal(productId) {
             <table class="specs-table">
               <tr><td>Матеріал</td><td>${product.material || 'Дерево'}</td></tr>
               ${product.assembly_time_mins > 0 ? `<tr><td>Орієнтовний час складання</td><td>~${Math.round(product.assembly_time_mins / 60)} год.</td></tr>` : ''}
-              ${Object.entries(specs).map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}
+              ${Object.entries(specs)
+                .filter(([k]) => isPuzzleOrConstructor || !/складність|сложность/i.test(k))
+                .map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}
             </table>
           </div>
         </div>

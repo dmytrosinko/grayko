@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS public.products (
     material TEXT,
     parts_count INT DEFAULT 0,
     assembly_time_mins INT DEFAULT 0,
-    difficulty_level TEXT DEFAULT 'Середній',
+    difficulty_level TEXT,
     skills_developed JSONB DEFAULT '[]'::jsonb,
     cost_price NUMERIC(10, 2) NOT NULL,
     rrp_price NUMERIC(10, 2) NOT NULL,

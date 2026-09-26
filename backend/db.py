@@ -65,7 +65,7 @@ def init_db():
         material TEXT, -- 'дерево', 'безпечний пластик', 'картон', 'текстиль', 'метал'
         parts_count INTEGER DEFAULT 0,
         assembly_time_mins INTEGER DEFAULT 0,
-        difficulty_level TEXT DEFAULT 'Середній', -- 'Легкий', 'Середній', 'Складний', 'Експерт'
+        difficulty_level TEXT, -- 'Легкий', 'Середній', 'Складний' (лише для пазлів та конструкторів)
         skills_developed TEXT, -- JSON array of strings e.g. ["дрібна моторика", "просторове мислення"]
         cost_price REAL NOT NULL, -- оптова ціна від постачальника
         rrp_price REAL NOT NULL,  -- рекомендована роздрібна ціна (RRP)

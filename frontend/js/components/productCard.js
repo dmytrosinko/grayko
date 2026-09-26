@@ -19,7 +19,7 @@ export function createProductCard(product) {
   card.style.cursor = 'pointer';
   card.innerHTML = `
     <div class="card-media">
-      <img src="${imgUrl}" alt="${product.title_uk}" class="card-img" loading="lazy">
+      <img src="${imgUrl}" alt="${product.title_uk}" class="card-img" loading="lazy" decoding="async">
       
       <div class="card-badges">
         <span class="badge-age">${product.age_group || '3+'}</span>

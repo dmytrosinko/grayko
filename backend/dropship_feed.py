@@ -336,10 +336,14 @@ def seed_database():
         
         skills = ["дрібна моторика", "уява", "просторове мислення"]
         
+        # Difficulty level only for puzzles, constructors, 3D models and brainteasers
+        is_puzzle_or_const = any(k in (name_uk or '').lower() for k in ['пазл', 'конструктор', 'головоломк', '3d', 'збірн', 'моделюван', 'ugears', 'wood trick', 'lego'])
+        item_difficulty = 'Середній' if is_puzzle_or_const else None
+
         product_rows.append((
             supplier_id, vendor_code, internal_sku, slug, title_uk, desc_html,
             brand, category_id, 3, 12, age_group, material,
-            0, 0, 'Середній', json.dumps(skills, ensure_ascii=False),
+            0, 0, item_difficulty, json.dumps(skills, ensure_ascii=False),
             cost_price, rrp_price, price, stock_qty, is_active,
             is_featured, is_new, is_bestseller,
             json.dumps(images), '', json.dumps(specs, ensure_ascii=False)
@@ -497,10 +501,14 @@ def sync_catalog_from_feed(sync_type='FAST', force_download=True):
             desc_html = desc_elem.text if desc_elem is not None else ''
             specs, brand, material, age_group = parse_description_metadata(desc_html, title_uk, category_id)
             
+            # Difficulty level only for puzzles, constructors, 3D models and brainteasers
+            is_puzzle_or_const = any(k in (title_uk or '').lower() for k in ['пазл', 'конструктор', 'головоломк', '3d', 'збірн', 'моделюван', 'ugears', 'wood trick', 'lego'])
+            item_difficulty = 'Середній' if is_puzzle_or_const else None
+
             new_products_batch.append((
                 supplier_id, vendor_code, internal_sku, slug, title_uk, desc_html,
                 brand, category_id, 3, 12, age_group, material,
-                0, 0, 'Середній', json.dumps(["дрібна моторика", "уява"], ensure_ascii=False),
+                0, 0, item_difficulty, json.dumps(["дрібна моторика", "уява"], ensure_ascii=False),
                 cost_price, rrp_price, price, stock_qty, is_active,
                 0, 1, 0, json.dumps(images), '', json.dumps(specs, ensure_ascii=False)
             ))

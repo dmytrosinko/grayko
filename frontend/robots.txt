@@ -1,0 +1,16 @@
+# Robots.txt for GRAYKO TOYS (https://grayko.ua)
+User-agent: *
+Allow: /
+Allow: /css/
+Allow: /js/
+Allow: /favicon.svg
+Allow: /site.webmanifest
+
+# Disallow private admin panel & internal endpoints
+Disallow: /admin
+Disallow: /admin.html
+Disallow: /api/
+Disallow: /data/
+
+# Sitemap location
+Sitemap: https://grayko.ua/sitemap.xml

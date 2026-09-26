@@ -23,6 +23,22 @@ class ToysApp {
 
   async init() {
     initHeader();
+
+    // Parse URL parameters for SEO & Deep Linking
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialCategory = urlParams.get('category');
+    const initialQuery = urlParams.get('q');
+    const initialProduct = urlParams.get('product');
+
+    if (initialCategory) {
+      state.filters.category = parseInt(initialCategory, 10);
+    }
+    if (initialQuery) {
+      state.filters.q = initialQuery;
+      const searchInput = document.getElementById('header-search-input');
+      if (searchInput) searchInput.value = initialQuery;
+    }
+
     renderCategoriesSidebar(state.categories);
     renderFiltersDrawer({});
     renderActiveFilterChips();
@@ -38,6 +54,35 @@ class ToysApp {
     await this.loadCategories();
     await this.loadProducts();
     this.loadHeroShowcase();
+
+    // If direct link to product modal was opened
+    if (initialProduct) {
+      const prodId = parseInt(initialProduct, 10);
+      if (!isNaN(prodId)) {
+        this.openProductModal(prodId);
+      }
+    }
+
+    // Handle browser navigation (back/forward)
+    window.addEventListener('popstate', () => {
+      const currentParams = new URLSearchParams(window.location.search);
+      const prodId = currentParams.get('product');
+      const catId = currentParams.get('category');
+
+      if (prodId) {
+        this.openProductModal(parseInt(prodId, 10));
+      } else {
+        const prodModal = document.getElementById('product-modal');
+        if (prodModal && !prodModal.classList.contains('hidden')) {
+          this.closeModal();
+        }
+        if (catId) {
+          state.setFilter('category', parseInt(catId, 10));
+        } else if (state.filters.category) {
+          state.setFilter('category', null);
+        }
+      }
+    });
 
     // Listen to reactive state changes
     state.on('filters_changed', () => {
@@ -626,21 +671,39 @@ class ToysApp {
     this.checkBodyModalOpen();
   }
 
+  openProductModal(productId) {
+    openProductModal(productId);
+    this.checkBodyModalOpen();
+  }
+
   closeModal() {
+    const productModal = document.getElementById('product-modal');
+    const wasProductModalOpen = productModal && !productModal.classList.contains('hidden');
+
     document.querySelectorAll('.modal-container').forEach(m => m.classList.add('hidden'));
     const backdrop = document.getElementById('modal-backdrop');
     if (backdrop && !this.hasAnyOtherModalOpen()) {
       backdrop.classList.add('hidden');
     }
     this.checkBodyModalOpen();
+
+    if (wasProductModalOpen) {
+      const productSchema = document.getElementById('product-schema-ld');
+      if (productSchema) productSchema.remove();
+      updateCatalogHeader();
+    }
   }
 
   closeAllModals() {
+    const productSchema = document.getElementById('product-schema-ld');
+    if (productSchema) productSchema.remove();
+
     this.closeCart();
     this.closeModal();
     this.closeFilters();
     this.closeCategoriesDrawer();
     document.body.classList.remove('modal-open');
+    updateCatalogHeader();
   }
 
   openDeliveryModal() {

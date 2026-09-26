@@ -9,10 +9,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <!-- Favicons & App Icons -->
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=2">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2">
   <link rel="manifest" href="/site.webmanifest">
   <meta name="theme-color" content="#FF5A5F">
 
@@ -72,14 +72,7 @@
           </div>
         </div>
 
-        <div class="hero-actions">
-          <a href="#catalog" class="btn btn-primary btn-lg" onclick="document.getElementById('catalog').scrollIntoView({behavior: 'smooth'})">
-            Всі іграшки каталогу 🚀
-          </a>
-          <button class="btn btn-glass btn-lg" onclick="window.app.filterByBestsellers()">
-            ⭐ Топ-хіти продажів
-          </button>
-        </div>
+
       </div>
 
       <div class="hero-showcase" id="hero-showcase-container">
@@ -126,17 +119,6 @@
         </div>
 
         <div class="catalog-controls">
-          <!-- Mobile Categories Button -->
-          <button id="btn-toggle-mobile-categories" class="btn btn-outline btn-catalog-ctrl btn-mobile-cats" aria-label="Категорії" onclick="window.app.toggleCategoriesDrawer()">
-            <span class="icon">📁</span><span>Категорії</span>
-          </button>
-
-          <!-- Filter Trigger Button (Desktop & Mobile) -->
-          <button id="btn-toggle-filters" class="btn btn-outline btn-catalog-ctrl btn-filter-trigger" aria-label="Фільтри" onclick="window.app.toggleFilters()">
-            <span class="icon">⚡</span><span>Фільтри</span>
-            <span class="filter-count-badge hidden">0</span>
-          </button>
-
           <!-- Sorting Dropdown -->
           <div class="sort-wrapper">
             <label for="sort-select" class="sort-label">Сортування:</label>

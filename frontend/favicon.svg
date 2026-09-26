@@ -6,47 +6,44 @@
       <stop offset="100%" stop-color="#E03E48" />
     </linearGradient>
     <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
-      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#7A0008" flood-opacity="0.25" />
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#7A0008" flood-opacity="0.2" />
     </filter>
   </defs>
 
   <!-- Squircle Base -->
   <rect width="512" height="512" rx="120" ry="120" fill="url(#bgGrad)" />
 
-  <!-- Playful Sparkle top right -->
-  <path d="M 400 65 Q 400 95 430 95 Q 400 95 400 125 Q 400 95 370 95 Q 400 95 400 65 Z" fill="#FFE082" />
-
   <!-- Teddy Bear Face Group -->
   <g filter="url(#shadow)">
     <!-- Left Ear -->
-    <circle cx="160" cy="170" r="52" fill="#FFFFFF" />
-    <circle cx="160" cy="170" r="28" fill="#FFCCD0" />
+    <circle cx="160" cy="154" r="52" fill="#FFFFFF" />
+    <circle cx="160" cy="154" r="28" fill="#FFCCD0" />
 
     <!-- Right Ear -->
-    <circle cx="352" cy="170" r="52" fill="#FFFFFF" />
-    <circle cx="352" cy="170" r="28" fill="#FFCCD0" />
+    <circle cx="352" cy="154" r="52" fill="#FFFFFF" />
+    <circle cx="352" cy="154" r="28" fill="#FFCCD0" />
 
     <!-- Head -->
-    <ellipse cx="256" cy="275" rx="146" ry="132" fill="#FFFFFF" />
+    <ellipse cx="256" cy="259" rx="146" ry="132" fill="#FFFFFF" />
 
     <!-- Eyes -->
-    <circle cx="204" cy="245" r="15" fill="#0F172A" />
-    <circle cx="209" cy="240" r="5" fill="#FFFFFF" />
+    <circle cx="204" cy="229" r="15" fill="#0F172A" />
+    <circle cx="209" cy="224" r="5" fill="#FFFFFF" />
 
-    <circle cx="308" cy="245" r="15" fill="#0F172A" />
-    <circle cx="313" cy="240" r="5" fill="#FFFFFF" />
+    <circle cx="308" cy="229" r="15" fill="#0F172A" />
+    <circle cx="313" cy="224" r="5" fill="#FFFFFF" />
 
     <!-- Cheeks (Blush) -->
-    <ellipse cx="180" cy="285" rx="20" ry="11" fill="#FFB3B8" opacity="0.85" />
-    <ellipse cx="332" cy="285" rx="20" ry="11" fill="#FFB3B8" opacity="0.85" />
+    <ellipse cx="180" cy="269" rx="20" ry="11" fill="#FFB3B8" opacity="0.85" />
+    <ellipse cx="332" cy="269" rx="20" ry="11" fill="#FFB3B8" opacity="0.85" />
 
     <!-- Muzzle / Snout -->
-    <ellipse cx="256" cy="308" rx="60" ry="46" fill="#FFF1F2" />
+    <ellipse cx="256" cy="292" rx="60" ry="46" fill="#FFF1F2" />
 
     <!-- Nose -->
-    <path d="M 238 290 C 238 280, 274 280, 274 290 C 274 302, 256 308, 256 308 C 256 308, 238 302, 238 290 Z" fill="#0F172A" />
+    <path d="M 238 274 C 238 264, 274 264, 274 274 C 274 286, 256 292, 256 292 C 256 292, 238 286, 238 274 Z" fill="#0F172A" />
 
     <!-- Mouth -->
-    <path d="M 256 308 L 256 318 M 238 320 Q 256 334 256 318 Q 256 334 274 320" fill="none" stroke="#0F172A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M 256 292 L 256 302 M 238 304 Q 256 318 256 302 Q 256 318 274 304" fill="none" stroke="#0F172A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
   </g>
 </svg>

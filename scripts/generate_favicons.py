@@ -12,48 +12,45 @@ svg_content = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" w
       <stop offset="100%" stop-color="#E03E48" />
     </linearGradient>
     <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
-      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#7A0008" flood-opacity="0.25" />
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#7A0008" flood-opacity="0.2" />
     </filter>
   </defs>
 
   <!-- Squircle Base -->
   <rect width="512" height="512" rx="120" ry="120" fill="url(#bgGrad)" />
 
-  <!-- Playful Sparkle top right -->
-  <path d="M 400 65 Q 400 95 430 95 Q 400 95 400 125 Q 400 95 370 95 Q 400 95 400 65 Z" fill="#FFE082" />
-
   <!-- Teddy Bear Face Group -->
   <g filter="url(#shadow)">
     <!-- Left Ear -->
-    <circle cx="160" cy="170" r="52" fill="#FFFFFF" />
-    <circle cx="160" cy="170" r="28" fill="#FFCCD0" />
+    <circle cx="160" cy="154" r="52" fill="#FFFFFF" />
+    <circle cx="160" cy="154" r="28" fill="#FFCCD0" />
 
     <!-- Right Ear -->
-    <circle cx="352" cy="170" r="52" fill="#FFFFFF" />
-    <circle cx="352" cy="170" r="28" fill="#FFCCD0" />
+    <circle cx="352" cy="154" r="52" fill="#FFFFFF" />
+    <circle cx="352" cy="154" r="28" fill="#FFCCD0" />
 
     <!-- Head -->
-    <ellipse cx="256" cy="275" rx="146" ry="132" fill="#FFFFFF" />
+    <ellipse cx="256" cy="259" rx="146" ry="132" fill="#FFFFFF" />
 
     <!-- Eyes -->
-    <circle cx="204" cy="245" r="15" fill="#0F172A" />
-    <circle cx="209" cy="240" r="5" fill="#FFFFFF" />
+    <circle cx="204" cy="229" r="15" fill="#0F172A" />
+    <circle cx="209" cy="224" r="5" fill="#FFFFFF" />
 
-    <circle cx="308" cy="245" r="15" fill="#0F172A" />
-    <circle cx="313" cy="240" r="5" fill="#FFFFFF" />
+    <circle cx="308" cy="229" r="15" fill="#0F172A" />
+    <circle cx="313" cy="224" r="5" fill="#FFFFFF" />
 
     <!-- Cheeks (Blush) -->
-    <ellipse cx="180" cy="285" rx="20" ry="11" fill="#FFB3B8" opacity="0.85" />
-    <ellipse cx="332" cy="285" rx="20" ry="11" fill="#FFB3B8" opacity="0.85" />
+    <ellipse cx="180" cy="269" rx="20" ry="11" fill="#FFB3B8" opacity="0.85" />
+    <ellipse cx="332" cy="269" rx="20" ry="11" fill="#FFB3B8" opacity="0.85" />
 
     <!-- Muzzle / Snout -->
-    <ellipse cx="256" cy="308" rx="60" ry="46" fill="#FFF1F2" />
+    <ellipse cx="256" cy="292" rx="60" ry="46" fill="#FFF1F2" />
 
     <!-- Nose -->
-    <path d="M 238 290 C 238 280, 274 280, 274 290 C 274 302, 256 308, 256 308 C 256 308, 238 302, 238 290 Z" fill="#0F172A" />
+    <path d="M 238 274 C 238 264, 274 264, 274 274 C 274 286, 256 292, 256 292 C 256 292, 238 286, 238 274 Z" fill="#0F172A" />
 
     <!-- Mouth -->
-    <path d="M 256 308 L 256 318 M 238 320 Q 256 334 256 318 Q 256 334 274 320" fill="none" stroke="#0F172A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M 256 292 L 256 302 M 238 304 Q 256 318 256 302 Q 256 318 274 304" fill="none" stroke="#0F172A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
   </g>
 </svg>
 '''
@@ -70,51 +67,42 @@ img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
 draw = ImageDraw.Draw(img)
 
 # Squircle background
-# Using rounded_rectangle
 draw.rounded_rectangle([0, 0, size, size], radius=240, fill=(255, 90, 95, 255))
 
-# Sparkle top-right
-# Diamond star
-star_pts = [
-    (800, 130), (815, 170), (860, 185), (815, 200),
-    (800, 245), (785, 200), (740, 185), (785, 170)
-]
-draw.polygon(star_pts, fill=(255, 224, 130, 255))
-
-# Teddy Bear Coordinates (scaled by 2 from 512)
+# Teddy Bear Coordinates (centered and scaled by 2 from 512)
 # Ears
-# Left ear outer (320, 340, r=104)
-draw.ellipse([320 - 104, 340 - 104, 320 + 104, 340 + 104], fill=(255, 255, 255, 255))
-draw.ellipse([320 - 56, 340 - 56, 320 + 56, 340 + 56], fill=(255, 204, 208, 255))
+# Left ear outer (320, 308, r=104)
+draw.ellipse([320 - 104, 308 - 104, 320 + 104, 308 + 104], fill=(255, 255, 255, 255))
+draw.ellipse([320 - 56, 308 - 56, 320 + 56, 308 + 56], fill=(255, 204, 208, 255))
 
-# Right ear outer (704, 340, r=104)
-draw.ellipse([704 - 104, 340 - 104, 704 + 104, 340 + 104], fill=(255, 255, 255, 255))
-draw.ellipse([704 - 56, 340 - 56, 704 + 56, 340 + 56], fill=(255, 204, 208, 255))
+# Right ear outer (704, 308, r=104)
+draw.ellipse([704 - 104, 308 - 104, 704 + 104, 308 + 104], fill=(255, 255, 255, 255))
+draw.ellipse([704 - 56, 308 - 56, 704 + 56, 308 + 56], fill=(255, 204, 208, 255))
 
-# Head (512, 550, rx=292, ry=264)
-draw.ellipse([512 - 292, 550 - 264, 512 + 292, 550 + 264], fill=(255, 255, 255, 255))
+# Head (512, 518, rx=292, ry=264)
+draw.ellipse([512 - 292, 518 - 264, 512 + 292, 518 + 264], fill=(255, 255, 255, 255))
 
-# Eyes (408, 490) & (616, 490), r=30
-draw.ellipse([408 - 30, 490 - 30, 408 + 30, 490 + 30], fill=(15, 23, 42, 255))
-draw.ellipse([418 - 10, 480 - 10, 418 + 10, 480 + 10], fill=(255, 255, 255, 255))
+# Eyes (408, 458) & (616, 458), r=30
+draw.ellipse([408 - 30, 458 - 30, 408 + 30, 458 + 30], fill=(15, 23, 42, 255))
+draw.ellipse([418 - 10, 448 - 10, 418 + 10, 448 + 10], fill=(255, 255, 255, 255))
 
-draw.ellipse([616 - 30, 490 - 30, 616 + 30, 490 + 30], fill=(15, 23, 42, 255))
-draw.ellipse([626 - 10, 480 - 10, 626 + 10, 480 + 10], fill=(255, 255, 255, 255))
+draw.ellipse([616 - 30, 458 - 30, 616 + 30, 458 + 30], fill=(15, 23, 42, 255))
+draw.ellipse([626 - 10, 448 - 10, 626 + 10, 448 + 10], fill=(255, 255, 255, 255))
 
-# Cheeks (360, 570) & (664, 570), rx=40, ry=22
-draw.ellipse([360 - 40, 570 - 22, 360 + 40, 570 + 22], fill=(255, 179, 184, 210))
-draw.ellipse([664 - 40, 570 - 22, 664 + 40, 570 + 22], fill=(255, 179, 184, 210))
+# Cheeks (360, 538) & (664, 538), rx=40, ry=22
+draw.ellipse([360 - 40, 538 - 22, 360 + 40, 538 + 22], fill=(255, 179, 184, 210))
+draw.ellipse([664 - 40, 538 - 22, 664 + 40, 538 + 22], fill=(255, 179, 184, 210))
 
-# Snout (512, 616), rx=120, ry=92
-draw.ellipse([512 - 120, 616 - 92, 512 + 120, 616 + 92], fill=(255, 241, 242, 255))
+# Snout (512, 584), rx=120, ry=92
+draw.ellipse([512 - 120, 584 - 92, 512 + 120, 584 + 92], fill=(255, 241, 242, 255))
 
-# Nose (512, 580), rx=38, ry=26
-draw.ellipse([512 - 38, 580 - 26, 512 + 38, 580 + 26], fill=(15, 23, 42, 255))
+# Nose (512, 548), rx=38, ry=26
+draw.ellipse([512 - 38, 548 - 26, 512 + 38, 548 + 26], fill=(15, 23, 42, 255))
 
 # Mouth lines
-draw.line([(512, 606), (512, 630)], fill=(15, 23, 42, 255), width=10)
-draw.arc([470, 600, 512, 650], start=0, end=140, fill=(15, 23, 42, 255), width=10)
-draw.arc([512, 600, 554, 650], start=40, end=180, fill=(15, 23, 42, 255), width=10)
+draw.line([(512, 574), (512, 598)], fill=(15, 23, 42, 255), width=10)
+draw.arc([470, 568, 512, 618], start=0, end=140, fill=(15, 23, 42, 255), width=10)
+draw.arc([512, 568, 554, 618], start=40, end=180, fill=(15, 23, 42, 255), width=10)
 
 # Generate multi-size icons
 sizes = {

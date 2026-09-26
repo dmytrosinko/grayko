@@ -771,6 +771,10 @@
   border-bottom: 1px solid var(--border-light);
 }
 
+.filter-group:last-child {
+  border-bottom: none;
+}
+
 .filter-group-title {
   font-size: 13px;
   font-weight: 800;

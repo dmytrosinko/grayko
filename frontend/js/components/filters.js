@@ -318,39 +318,6 @@ export function renderFiltersDrawer(facets = {}) {
         `;
       })()}
 
-      <!-- Materials -->
-      <div class="filter-group">
-        <div class="filter-group-title">
-          <span>🪵 Матеріал</span>
-          ${state.filters.materials.length ? `<span class="filter-selected-count">(${state.filters.materials.length})</span>` : ''}
-        </div>
-        <div class="filter-options-list">
-          ${materials.map(mat => `
-            <label class="custom-checkbox">
-              <input type="checkbox" class="filter-mat-cb" value="${mat}" ${state.filters.materials.includes(mat) ? 'checked' : ''}>
-              <span>${mat.charAt(0).toUpperCase() + mat.slice(1)}</span>
-            </label>
-          `).join('')}
-        </div>
-      </div>
-
-      <!-- Skills Developed -->
-      ${skills.length > 0 ? `
-        <div class="filter-group" style="border-bottom: none;">
-          <div class="filter-group-title">
-            <span>🎯 Розвиток навичок</span>
-            ${state.filters.skill ? `<button class="filter-clear-link" onclick="window.app.clearSkillFilter()">Скинути</button>` : ''}
-          </div>
-          <div class="filter-options-list">
-            ${skills.map(sk => `
-              <label class="custom-checkbox">
-                <input type="radio" name="skill_filter" value="${sk}" ${state.filters.skill === sk ? 'checked' : ''} class="filter-skill-rb">
-                <span>${sk}</span>
-              </label>
-            `).join('')}
-          </div>
-        </div>
-      ` : ''}
     </div>
 
     <!-- Drawer Sticky Action Footer -->
@@ -378,21 +345,9 @@ export function renderFiltersDrawer(facets = {}) {
     });
   });
 
-  document.querySelectorAll('.filter-mat-cb').forEach(cb => {
-    cb.addEventListener('change', (e) => {
-      state.toggleArrayFilter('materials', e.target.value);
-    });
-  });
-
   document.querySelectorAll('.filter-brand-cb').forEach(cb => {
     cb.addEventListener('change', (e) => {
       state.toggleArrayFilter('brands', e.target.value);
-    });
-  });
-
-  document.querySelectorAll('.filter-skill-rb').forEach(rb => {
-    rb.addEventListener('change', (e) => {
-      state.setFilter('skill', e.target.value);
     });
   });
 
@@ -435,9 +390,7 @@ export function getActiveFiltersCount() {
   let count = 0;
   if (state.filters.in_stock) count++;
   if (state.filters.age_groups && state.filters.age_groups.length) count += state.filters.age_groups.length;
-  if (state.filters.materials && state.filters.materials.length) count += state.filters.materials.length;
   if (state.filters.brands && state.filters.brands.length) count += state.filters.brands.length;
-  if (state.filters.skill) count++;
   if (state.filters.min_price != null || state.filters.max_price != null) count++;
   return count;
 }
@@ -505,14 +458,6 @@ export function renderActiveFilterChips() {
     });
   });
 
-  // Materials
-  (state.filters.materials || []).forEach(mat => {
-    chips.push({
-      label: `🪵 ${mat}`,
-      remove: () => state.toggleArrayFilter('materials', mat)
-    });
-  });
-
   // Brands
   (state.filters.brands || []).forEach(b => {
     chips.push({
@@ -520,14 +465,6 @@ export function renderActiveFilterChips() {
       remove: () => state.toggleArrayFilter('brands', b)
     });
   });
-
-  // Skill
-  if (state.filters.skill) {
-    chips.push({
-      label: `🎯 ${state.filters.skill}`,
-      remove: () => state.setFilter('skill', null)
-    });
-  }
 
   // Price Range
   if (state.filters.min_price != null || state.filters.max_price != null) {

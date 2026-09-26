@@ -24,6 +24,10 @@ export function initHeader() {
 
       <!-- Action Buttons -->
       <div class="header-actions">
+        <button class="header-action-btn mobile-header-cat-btn" onclick="window.app.toggleCategoriesDrawer()" title="Каталог іграшок">
+          <span>📁</span>
+          <span class="btn-text">Каталог</span>
+        </button>
         <button class="header-action-btn cart-header-btn" onclick="window.app.openCart()">
           <span>🛒</span>
           <span class="btn-text">Кошик</span>

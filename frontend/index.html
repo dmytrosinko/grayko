@@ -138,6 +138,16 @@
         </div>
 
         <div class="catalog-controls">
+          <!-- Mobile-only quick trigger buttons (hidden on desktop) -->
+          <button id="btn-toggle-mobile-categories" class="btn btn-outline btn-catalog-ctrl btn-mobile-only" aria-label="Категорії" onclick="window.app.toggleCategoriesDrawer()">
+            <span class="icon">📁</span><span>Категорії</span>
+          </button>
+
+          <button id="btn-toggle-filters" class="btn btn-outline btn-catalog-ctrl btn-filter-trigger btn-mobile-only" aria-label="Фільтри" onclick="window.app.toggleFilters()">
+            <span class="icon">⚡</span><span>Фільтри</span>
+            <span class="filter-count-badge hidden">0</span>
+          </button>
+
           <!-- Sorting Dropdown -->
           <div class="sort-wrapper">
             <label for="sort-select" class="sort-label">Сортування:</label>
@@ -284,13 +294,18 @@
 
   <!-- Mobile Sticky Bottom Quick-Bar -->
   <div class="mobile-bottom-bar">
-    <button class="mobile-nav-btn active" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+    <button class="mobile-nav-btn" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
       <span class="nav-icon">🏠</span>
       <span>Головна</span>
     </button>
-    <button class="mobile-nav-btn" onclick="document.getElementById('catalog').scrollIntoView({behavior: 'smooth'})">
-      <span class="nav-icon">🧸</span>
-      <span>Каталог</span>
+    <button class="mobile-nav-btn" onclick="window.app.toggleCategoriesDrawer()">
+      <span class="nav-icon">📁</span>
+      <span>Категорії</span>
+    </button>
+    <button class="mobile-nav-btn" onclick="window.app.toggleFilters()">
+      <span class="nav-icon">⚡</span>
+      <span>Фільтри</span>
+      <span class="filter-count-badge hidden">0</span>
     </button>
     <button class="mobile-nav-btn cart-btn" onclick="window.app.openCart()">
       <span class="nav-icon">🛒</span>

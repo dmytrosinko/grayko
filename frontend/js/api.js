@@ -305,28 +305,210 @@ export const api = {
 
   // Logistics & Nova Poshta
   async searchCities(query = '') {
-    return safeFetch(`/api/logistics/cities?q=${encodeURIComponent(query)}`, {}, () => {
-      const q = query.trim().toLowerCase();
-      if (!q) return { cities: CITIES_DATA };
-      const filtered = CITIES_DATA.filter(c =>
-        c.name.toLowerCase().includes(q) || c.region.toLowerCase().includes(q)
-      );
-      return { cities: filtered.length ? filtered : CITIES_DATA };
-    });
+    const q = (query || '').trim();
+    if (!q) {
+      return { cities: CITIES_DATA };
+    }
+
+    // 1. Try local server endpoint if available
+    try {
+      const res = await fetch(`/api/logistics/cities?q=${encodeURIComponent(q)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.cities && Array.isArray(data.cities) && data.cities.length) {
+          return data;
+        }
+      }
+    } catch (e) {
+      // Offline / Netlify static host
+    }
+
+    // 2. Direct Nova Poshta API 2.0 (works in browser directly via CORS)
+    try {
+      const npRes = await fetch('https://api.novaposhta.ua/v2.0/json/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          modelName: 'Address',
+          calledMethod: 'searchSettlements',
+          methodProperties: {
+            CityName: q,
+            Limit: '25',
+            Page: '1'
+          }
+        })
+      });
+      if (npRes.ok) {
+        const npData = await npRes.json();
+        if (npData.success && npData.data && npData.data[0] && Array.isArray(npData.data[0].Addresses)) {
+          const formattedCities = npData.data[0].Addresses.map(item => ({
+            ref: item.DeliveryCity || item.Ref,
+            settlementRef: item.Ref,
+            name: item.MainDescription || item.Present,
+            present: item.Present,
+            area: item.Area || item.AreaDescription || '',
+            region: item.Region || item.RegionsDescription || '',
+            settlementType: item.SettlementTypeCode || ''
+          }));
+          return { cities: formattedCities };
+        }
+      }
+    } catch (e) {
+      console.warn("Direct Nova Poshta cities query failed:", e);
+    }
+
+    // 3. Fallback: filter local mock data
+    const qLower = q.toLowerCase();
+    const filtered = CITIES_DATA.filter(c =>
+      c.name.toLowerCase().includes(qLower) || c.region.toLowerCase().includes(qLower)
+    );
+    return { cities: filtered.length ? filtered : CITIES_DATA };
   },
 
-  async getWarehouses(city = 'Київ') {
-    return safeFetch(`/api/logistics/warehouses?city=${encodeURIComponent(city)}`, {}, () => {
-      const found = CITIES_DATA.find(c => c.name.toLowerCase() === city.toLowerCase());
-      if (found) return { warehouses: found.warehouses };
-      return {
-        warehouses: [
-          { ref: "wh-gen-1", name: `Відділення №1 (Вантажне): вул. Центральна, 1`, type: "Branch", max_weight: 1100 },
-          { ref: "wh-gen-2", name: `Відділення №2 (до 30 кг): вул. Головна, 25`, type: "Branch", max_weight: 30 },
-          { ref: "wh-gen-postomat", name: `Поштомат №1001: просп. Свободи, 10`, type: "Postomat", max_weight: 20 }
-        ]
+  async getWarehouses(options = {}) {
+    let cityRef = '';
+    let cityName = '';
+    let q = '';
+    let category = '';
+
+    if (typeof options === 'string') {
+      cityName = options;
+    } else if (options && typeof options === 'object') {
+      cityRef = options.cityRef || '';
+      cityName = options.cityName || options.city || '';
+      q = options.q || '';
+      category = options.category || '';
+    }
+
+    if (!cityRef && !cityName) {
+      return { warehouses: [] };
+    }
+
+    // 1. Try local server endpoint if available
+    try {
+      const params = new URLSearchParams();
+      if (cityRef) params.set('cityRef', cityRef);
+      if (cityName) params.set('cityName', cityName);
+      if (q) params.set('q', q);
+      if (category) params.set('category', category);
+
+      const res = await fetch(`/api/logistics/warehouses?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.warehouses && Array.isArray(data.warehouses) && data.warehouses.length) {
+          return data;
+        }
+      }
+    } catch (e) {
+      // Offline / Netlify static host
+    }
+
+    // 2. Direct Nova Poshta API 2.0
+    try {
+      const methodProperties = {
+        Limit: '500',
+        FindByString: (q || '').trim()
       };
-    });
+      if (cityRef) {
+        methodProperties.CityRef = cityRef;
+      } else if (cityName) {
+        methodProperties.CityName = cityName;
+      }
+
+      const npRes = await fetch('https://api.novaposhta.ua/v2.0/json/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          modelName: 'Address',
+          calledMethod: 'getWarehouses',
+          methodProperties
+        })
+      });
+
+      if (npRes.ok) {
+        const npData = await npRes.json();
+        let rawWarehouses = npData.data;
+
+        // Fallback by clean CityName if cityRef query returned 0 warehouses
+        if ((!npData.success || !Array.isArray(rawWarehouses) || rawWarehouses.length === 0) && cityName) {
+          const cleanCityName = cityName.replace(/^(м|смт|с|село|місто)\.?\s*/i, '').split(',')[0].trim();
+          const fallbackProps = {
+            Limit: '500',
+            FindByString: (q || '').trim(),
+            CityName: cleanCityName
+          };
+          const fbRes = await fetch('https://api.novaposhta.ua/v2.0/json/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              modelName: 'Address',
+              calledMethod: 'getWarehouses',
+              methodProperties: fallbackProps
+            })
+          });
+          if (fbRes.ok) {
+            const fbData = await fbRes.json();
+            if (fbData.success && Array.isArray(fbData.data)) {
+              rawWarehouses = fbData.data;
+            }
+          }
+        }
+
+        if (Array.isArray(rawWarehouses)) {
+          let warehouses = rawWarehouses.map(item => {
+            const isPostomat =
+              item.CategoryOfWarehouse === 'Postomat' ||
+              item.Description?.toLowerCase().includes('поштомат');
+            return {
+              ref: item.Ref,
+              number: item.Number,
+              name: item.Description,
+              description: item.Description,
+              shortAddress: item.ShortAddress,
+              category: isPostomat ? 'Postomat' : 'Branch',
+              typeOfWarehouse: item.TypeOfWarehouse,
+              maxWeight: item.MaxWeightAllowed || item.PlaceMaxWeightAllowed || '30',
+              phone: item.Phone || ''
+            };
+          });
+
+          if (category === 'Branch') {
+            warehouses = warehouses.filter(w => w.category === 'Branch');
+          } else if (category === 'Postomat') {
+            warehouses = warehouses.filter(w => w.category === 'Postomat');
+          }
+
+          return { warehouses };
+        }
+      }
+    } catch (e) {
+      console.warn("Direct Nova Poshta warehouses query failed:", e);
+    }
+
+    // 3. Fallback to mock data
+    const found = CITIES_DATA.find(c =>
+      (cityRef && c.ref === cityRef) ||
+      (cityName && c.name.toLowerCase() === cityName.toLowerCase())
+    );
+    if (found) {
+      let whs = found.warehouses.map(w => ({
+        ...w,
+        description: w.name,
+        category: w.type === 'Postomat' ? 'Postomat' : 'Branch',
+        shortAddress: w.name
+      }));
+      if (category === 'Branch') whs = whs.filter(w => w.category === 'Branch');
+      if (category === 'Postomat') whs = whs.filter(w => w.category === 'Postomat');
+      return { warehouses: whs };
+    }
+
+    return {
+      warehouses: [
+        { ref: "wh-gen-1", number: "1", name: `Відділення №1 (Вантажне): вул. Центральна, 1`, description: `Відділення №1 (Вантажне): вул. Центральна, 1`, shortAddress: `вул. Центральна, 1`, category: "Branch", maxWeight: 1100 },
+        { ref: "wh-gen-2", number: "2", name: `Відділення №2 (до 30 кг): вул. Головна, 25`, description: `Відділення №2 (до 30 кг): вул. Головна, 25`, shortAddress: `вул. Головна, 25`, category: "Branch", maxWeight: 30 },
+        { ref: "wh-gen-postomat", number: "1001", name: `Поштомат №1001: просп. Свободи, 10`, description: `Поштомат №1001: просп. Свободи, 10`, shortAddress: `просп. Свободи, 10`, category: "Postomat", maxWeight: 20 }
+      ]
+    };
   },
 
   // Cart & Orders

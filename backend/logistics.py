@@ -1,6 +1,7 @@
 import random
 import json
 from datetime import datetime
+import time
 
 UKRAINE_CITIES = [
     {
@@ -76,22 +77,189 @@ UKRAINE_CITIES = [
     }
 ]
 
+NP_API_URL = "https://api.novaposhta.ua/v2.0/json/"
+CACHE_CITIES = {}  # query -> (timestamp, data)
+CACHE_WAREHOUSES = {}  # key -> (timestamp, data)
+
 def search_settlements(query=""):
-    """Simulates Nova Poshta API 2.0 Settlement search."""
-    q = query.strip().lower()
+    """
+    Searches settlements using Nova Poshta API 2.0 searchSettlements.
+    Falls back to UKRAINE_CITIES if offline or API error.
+    """
+    q = (query or "").strip()
     if not q:
         return UKRAINE_CITIES
-    return [c for c in UKRAINE_CITIES if q in c["name"].lower() or q in c["region"].lower()]
 
-def get_city_warehouses(city_name):
-    """Returns warehouses & postomats for a chosen city."""
+    cache_key = q.lower()
+    now = time.time()
+    if cache_key in CACHE_CITIES:
+        ts, data = CACHE_CITIES[cache_key]
+        if now - ts < 300:
+            return data
+
+    try:
+        import urllib.request
+        payload = {
+            "modelName": "Address",
+            "calledMethod": "searchSettlements",
+            "methodProperties": {
+                "CityName": q,
+                "Limit": "25",
+                "Page": "1"
+            }
+        }
+        req = urllib.request.Request(
+            NP_API_URL,
+            json.dumps(payload).encode("utf-8"),
+            {"Content-Type": "application/json"}
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            res_data = json.loads(resp.read().decode("utf-8"))
+            if res_data.get("success") and res_data.get("data") and len(res_data["data"]) > 0:
+                addresses = res_data["data"][0].get("Addresses", [])
+                formatted = []
+                for item in addresses:
+                    formatted.append({
+                        "ref": item.get("DeliveryCity") or item.get("Ref"),
+                        "settlementRef": item.get("Ref"),
+                        "name": item.get("MainDescription") or item.get("Present"),
+                        "present": item.get("Present"),
+                        "area": item.get("AreaDescription") or item.get("Area") or "",
+                        "region": item.get("RegionsDescription") or item.get("Region") or "",
+                        "settlementType": item.get("SettlementTypeCode") or ""
+                    })
+                CACHE_CITIES[cache_key] = (now, formatted)
+                return formatted
+    except Exception as e:
+        print(f"Error in NP search_settlements: {e}")
+
+    # Fallback to local data
+    q_lower = q.lower()
+    return [c for c in UKRAINE_CITIES if q_lower in c["name"].lower() or q_lower in c["region"].lower()]
+
+def get_city_warehouses(city_ref="", city_name="", q="", category=""):
+    """
+    Fetches warehouses/postomats using Nova Poshta API 2.0 getWarehouses.
+    Supports filtering by city_ref, city_name, q (street/number), category (Branch, Postomat).
+    """
+    city_ref = (city_ref or "").strip()
+    city_name = (city_name or "").strip()
+    q = (q or "").strip()
+    category = (category or "").strip()
+
+    if not city_ref and not city_name:
+        return []
+
+    cache_key = f"{city_ref}_{city_name}_{q}_{category}".lower()
+    now = time.time()
+    if cache_key in CACHE_WAREHOUSES:
+        ts, data = CACHE_WAREHOUSES[cache_key]
+        if now - ts < 300:
+            return data
+
+    try:
+        import urllib.request
+        method_props = {
+            "Limit": "500",
+            "FindByString": q
+        }
+        if city_ref:
+            method_props["CityRef"] = city_ref
+        elif city_name:
+            method_props["CityName"] = city_name
+
+        payload = {
+            "modelName": "Address",
+            "calledMethod": "getWarehouses",
+            "methodProperties": method_props
+        }
+
+        req = urllib.request.Request(
+            NP_API_URL,
+            json.dumps(payload).encode("utf-8"),
+            {"Content-Type": "application/json"}
+        )
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            res_data = json.loads(resp.read().decode("utf-8"))
+            raw_warehouses = res_data.get("data") if res_data.get("success") else []
+
+            # Fallback by clean city name if cityRef failed or was empty
+            if (not raw_warehouses or len(raw_warehouses) == 0) and city_name:
+                import re
+                clean_name = re.sub(r'^(м|смт|с|село|місто)\.?\s*', '', city_name, flags=re.I).split(',')[0].strip()
+                fb_props = {
+                    "Limit": "500",
+                    "FindByString": q,
+                    "CityName": clean_name
+                }
+                fb_payload = {
+                    "modelName": "Address",
+                    "calledMethod": "getWarehouses",
+                    "methodProperties": fb_props
+                }
+                fb_req = urllib.request.Request(
+                    NP_API_URL,
+                    json.dumps(fb_payload).encode("utf-8"),
+                    {"Content-Type": "application/json"}
+                )
+                with urllib.request.urlopen(fb_req, timeout=6) as fb_resp:
+                    fb_res_data = json.loads(fb_resp.read().decode("utf-8"))
+                    if fb_res_data.get("success") and fb_res_data.get("data"):
+                        raw_warehouses = fb_res_data["data"]
+
+            if raw_warehouses and isinstance(raw_warehouses, list):
+                warehouses = []
+                for item in raw_warehouses:
+                    desc = item.get("Description", "")
+                    cat_val = item.get("CategoryOfWarehouse", "")
+                    is_postomat = (cat_val == "Postomat" or "поштомат" in desc.lower())
+                    wh_item = {
+                        "ref": item.get("Ref"),
+                        "number": item.get("Number"),
+                        "name": desc,
+                        "description": desc,
+                        "shortAddress": item.get("ShortAddress", ""),
+                        "category": "Postomat" if is_postomat else "Branch",
+                        "typeOfWarehouse": item.get("TypeOfWarehouse", ""),
+                        "maxWeight": item.get("MaxWeightAllowed") or item.get("PlaceMaxWeightAllowed") or "30",
+                        "phone": item.get("Phone", "")
+                    }
+                    if category == "Branch" and wh_item["category"] != "Branch":
+                        continue
+                    if category == "Postomat" and wh_item["category"] != "Postomat":
+                        continue
+                    warehouses.append(wh_item)
+
+                CACHE_WAREHOUSES[cache_key] = (now, warehouses)
+                return warehouses
+    except Exception as e:
+        print(f"Error in NP get_city_warehouses: {e}")
+
+    # Fallback to local mock data
     for c in UKRAINE_CITIES:
-        if c["name"].lower() == city_name.lower():
-            return c["warehouses"]
+        if (city_ref and c["ref"] == city_ref) or (city_name and c["name"].lower() == city_name.lower()):
+            whs = []
+            for w in c.get("warehouses", []):
+                cat = "Postomat" if w.get("type") == "Postomat" else "Branch"
+                if category == "Branch" and cat != "Branch":
+                    continue
+                if category == "Postomat" and cat != "Postomat":
+                    continue
+                whs.append({
+                    "ref": w["ref"],
+                    "number": w.get("number", "1"),
+                    "name": w["name"],
+                    "description": w["name"],
+                    "shortAddress": w["name"],
+                    "category": cat,
+                    "maxWeight": w.get("max_weight", 30)
+                })
+            return whs
+
     return [
-        {"ref": "wh-gen-1", "name": f"Відділення №1 (Вантажне): вул. Центральна, 1", "type": "Branch", "max_weight": 1100},
-        {"ref": "wh-gen-2", "name": f"Відділення №2 (до 30 кг): вул. Головна, 25", "type": "Branch", "max_weight": 30},
-        {"ref": "wh-gen-postomat", "name": f"Поштомат №1001: просп. Свободи, 10", "type": "Postomat", "max_weight": 20}
+        {"ref": "wh-gen-1", "number": "1", "name": "Відділення №1 (Вантажне): вул. Центральна, 1", "description": "Відділення №1 (Вантажне): вул. Центральна, 1", "shortAddress": "вул. Центральна, 1", "category": "Branch", "maxWeight": 1100},
+        {"ref": "wh-gen-2", "number": "2", "name": "Відділення №2 (до 30 кг): вул. Головна, 25", "description": "Відділення №2 (до 30 кг): вул. Головна, 25", "shortAddress": "вул. Головна, 25", "category": "Branch", "maxWeight": 30},
+        {"ref": "wh-gen-postomat", "number": "1001", "name": "Поштомат №1001: просп. Свободи, 10", "description": "Поштомат №1001: просп. Свободи, 10", "shortAddress": "просп. Свободи, 10", "category": "Postomat", "maxWeight": 20}
     ]
 
 def generate_ttn_number():

@@ -143,15 +143,18 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
                 return
 
             # 5. API: Nova Poshta Logistics
-            elif path == '/api/logistics/cities':
+            elif path in ['/api/logistics/cities', '/api/novaposhta/cities']:
                 q = query.get('q', [''])[0]
                 results = search_settlements(q)
                 self.send_json({"cities": results})
                 return
 
-            elif path == '/api/logistics/warehouses':
-                city = query.get('city', ['Київ'])[0]
-                warehouses = get_city_warehouses(city)
+            elif path in ['/api/logistics/warehouses', '/api/novaposhta/warehouses']:
+                city_ref = query.get('cityRef', [''])[0]
+                city_name = query.get('cityName', query.get('city', ['Київ']))[0]
+                q_str = query.get('q', [''])[0]
+                category = query.get('category', [''])[0]
+                warehouses = get_city_warehouses(city_ref=city_ref, city_name=city_name, q=q_str, category=category)
                 self.send_json({"warehouses": warehouses})
                 return
 

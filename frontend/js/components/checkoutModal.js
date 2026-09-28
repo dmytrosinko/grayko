@@ -314,10 +314,8 @@ export async function openCheckoutModal() {
       <select id="chk-warehouse" class="np-wh-select">
         <option value="">-- Оберіть відділення або поштомат (${filteredWarehouses.length}) --</option>
         ${filteredWarehouses.map(w => {
-          const isPostomat = w.category === 'Postomat';
-          const prefix = isPostomat ? '📦 [Поштомат]' : '🏢 [Відділення]';
           const isSelected = selectedWarehouse === w.description ? 'selected' : '';
-          return `<option value="${w.description}" ${isSelected}>${prefix} ${w.description}</option>`;
+          return `<option value="${w.description}" ${isSelected}>${w.description}</option>`;
         }).join('')}
       </select>
     `;

@@ -270,20 +270,22 @@ export const supabaseClient = {
     const headers = getSupabaseHeaders();
     headers['Prefer'] = 'return=representation';
 
+    const orderNum = orderData.order_number || `GK-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
+
     const orderPayload = {
-      order_number: orderData.order_number,
-      customer_name: orderData.customer_name,
-      customer_phone: orderData.customer_phone,
+      order_number: orderNum,
+      customer_name: orderData.customer_name || 'Клієнт',
+      customer_phone: orderData.customer_phone || '',
       customer_email: orderData.customer_email || '',
       customer_comment: orderData.customer_comment || '',
       delivery_type: orderData.delivery_type || 'NOVA_POSHTA_WAREHOUSE',
-      delivery_city: orderData.delivery_city,
-      delivery_warehouse: orderData.delivery_warehouse,
-      payment_status: orderData.payment_status || 'PAID',
+      delivery_city: orderData.delivery_city || 'Київ',
+      delivery_warehouse: orderData.delivery_warehouse || 'Відділення №1',
+      payment_status: orderData.payment_status || 'PENDING_PAYMENT',
       payment_method: orderData.payment_method || 'MONOBANK',
-      total_products_amount: orderData.total_products_amount,
-      total_shipping_amount: orderData.total_shipping_amount,
-      total_amount: orderData.total_amount,
+      total_products_amount: Number(orderData.total_products_amount || 0),
+      total_shipping_amount: Number(orderData.total_shipping_amount || 0),
+      total_amount: Number(orderData.total_amount || 0),
       fiscal_receipt_id: orderData.fiscal_receipt_id || null
     };
 
@@ -301,20 +303,32 @@ export const supabaseClient = {
     const created = await res.json();
     const orderId = created[0].id;
 
+    const shipments = (orderData.shipments && orderData.shipments.length > 0)
+      ? orderData.shipments
+      : [{
+          supplier_id: 1,
+          shipment_number: `${orderNum}-SH1`,
+          ttn_number: `2045${Math.floor(1000000000 + Math.random() * 9000000000)}`,
+          shipping_cost: Number(orderData.total_shipping_amount || 80.0),
+          packing_fee: 0.0,
+          shipping_status: 'NEW',
+          items: orderData.items || []
+        }];
+
     // Create shipments
-    for (const sh of (orderData.shipments || [])) {
+    for (const sh of shipments) {
       const shRes = await fetch(`${SUPABASE_URL}/rest/v1/order_shipments`, {
         method: 'POST',
         headers,
         body: JSON.stringify([{
           order_id: orderId,
           supplier_id: sh.supplier_id || 1,
-          shipment_number: sh.shipment_number,
-          ttn_number: sh.ttn_number,
-          shipping_cost: sh.shipping_cost || 80.0,
-          packing_fee: sh.packing_fee || 0.0,
+          shipment_number: sh.shipment_number || `${orderNum}-SH1`,
+          ttn_number: sh.ttn_number || `2045${Math.floor(1000000000 + Math.random() * 9000000000)}`,
+          shipping_cost: Number(sh.shipping_cost || 80.0),
+          packing_fee: Number(sh.packing_fee || 0.0),
           shipping_status: 'NEW',
-          nova_poshta_ref: `NP-REF-${sh.ttn_number}`,
+          nova_poshta_ref: `NP-REF-${sh.ttn_number || 'GEN'}`,
           sticker_pdf_url: `/api/shipments/${orderId}/sticker`
         }])
       });
@@ -325,11 +339,11 @@ export const supabaseClient = {
         const itemsPayload = (sh.items || []).map(it => ({
           shipment_id: shipmentId,
           product_id: it.product_id || it.id,
-          quantity: it.quantity || 1,
-          price_per_item: it.price,
-          cost_price_per_item: it.cost_price || 0.0,
-          product_title: it.title || it.title_uk || '',
-          product_sku: it.sku || it.internal_sku || ''
+          quantity: Number(it.quantity || 1),
+          price_per_item: Number(it.price || it.price_per_item || 0),
+          cost_price_per_item: Number(it.cost_price || it.cost_price_per_item || 0),
+          product_title: it.title || it.title_uk || it.product_title || 'Товар',
+          product_sku: it.sku || it.internal_sku || it.product_sku || ''
         }));
         if (itemsPayload.length) {
           await fetch(`${SUPABASE_URL}/rest/v1/order_items`, {
@@ -344,8 +358,8 @@ export const supabaseClient = {
     return {
       success: true,
       order_id: orderId,
-      order_number: orderData.order_number,
-      total_amount: orderData.total_amount,
+      order_number: orderNum,
+      total_amount: orderPayload.total_amount,
       data_source: 'supabase'
     };
   },

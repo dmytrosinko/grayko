@@ -16,6 +16,7 @@ import {
 } from './mockData.js';
 
 import { supabaseClient } from './supabaseClient.js';
+import { sendTelegramOrderNotification } from './telegramNotifier.js';
 
 // Local storage keys
 const STORAGE_KEY_PRODUCTS = 'grayko_products_db';
@@ -591,64 +592,84 @@ export const api = {
   },
 
   async createOrder(orderData) {
+    let orderResult = null;
+
     if (supabaseClient.isConfigured()) {
       try {
-        return await supabaseClient.createOrder(orderData);
+        orderResult = await supabaseClient.createOrder(orderData);
       } catch (err) {
         console.warn("Supabase order error, using local/api:", err);
       }
     }
 
-    return safeFetch('/api/orders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(orderData)
-    }, () => {
-      const orders = getLocalOrders();
-      const orderNum = `GR-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-      const now = new Date();
-      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    if (!orderResult) {
+      orderResult = await safeFetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      }, () => {
+        const orders = getLocalOrders();
+        const orderNum = orderData.order_number || `GK-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-      const generatedShipments = (orderData.shipments || []).map(s => ({
-        supplier_id: s.supplier_id,
-        supplier_name: s.supplier_name,
-        warehouse_city: s.warehouse_city,
-        ttn_number: generateTTN(),
-        shipping_cost: s.shipping_cost || 80.00,
-        packing_fee: s.packing_fee || 0.00,
-        shipping_status: 'NEW',
-        items: s.items || []
-      }));
+        const generatedShipments = (orderData.shipments || []).map(s => ({
+          supplier_id: s.supplier_id,
+          supplier_name: s.supplier_name,
+          warehouse_city: s.warehouse_city,
+          ttn_number: generateTTN(),
+          shipping_cost: s.shipping_cost || 80.00,
+          packing_fee: s.packing_fee || 0.00,
+          shipping_status: 'NEW',
+          items: s.items || []
+        }));
 
-      const newOrder = {
-        id: orders.length + 1,
-        order_number: orderNum,
-        customer_name: orderData.customer_name || 'Клієнт',
-        customer_phone: orderData.customer_phone || '',
-        customer_email: orderData.customer_email || '',
-        customer_comment: orderData.customer_comment || '',
-        delivery_city: orderData.delivery_city || 'Київ',
-        delivery_warehouse: orderData.delivery_warehouse || 'Відділення №1',
-        payment_status: 'PAID',
-        payment_method: 'MONOBANK',
-        total_products_amount: orderData.total_products_amount || 0,
-        total_shipping_amount: orderData.total_shipping_amount || 0,
-        total_amount: orderData.total_amount || 0,
-        created_at: dateStr,
-        shipments: generatedShipments
+        const newOrder = {
+          id: orders.length + 1,
+          order_number: orderNum,
+          customer_name: orderData.customer_name || 'Клієнт',
+          customer_phone: orderData.customer_phone || '',
+          customer_email: orderData.customer_email || '',
+          customer_comment: orderData.customer_comment || '',
+          delivery_city: orderData.delivery_city || 'Київ',
+          delivery_warehouse: orderData.delivery_warehouse || 'Відділення №1',
+          payment_status: 'PENDING_PAYMENT',
+          payment_method: orderData.payment_method || 'MONOBANK',
+          total_products_amount: orderData.total_products_amount || 0,
+          total_shipping_amount: orderData.total_shipping_amount || 0,
+          total_amount: orderData.total_amount || 0,
+          created_at: dateStr,
+          shipments: generatedShipments
+        };
+
+        orders.unshift(newOrder);
+        saveLocalOrders(orders);
+
+        return {
+          success: true,
+          order_id: newOrder.id,
+          order_number: orderNum,
+          total_amount: newOrder.total_amount,
+          shipments: generatedShipments,
+          message: "Замовлення успішно створено!"
+        };
+      });
+    }
+
+    // Always dispatch Telegram bot notification for real-time manager alerts
+    try {
+      const mergedOrder = {
+        ...orderData,
+        order_number: (orderResult && orderResult.order_number) || orderData.order_number,
+        total_amount: (orderResult && orderResult.total_amount) || orderData.total_amount,
+        id: (orderResult && (orderResult.order_id || orderResult.id)) || 1
       };
+      await sendTelegramOrderNotification(mergedOrder, orderData.items || []);
+    } catch (e) {
+      console.warn("Telegram notification dispatch error:", e);
+    }
 
-      orders.unshift(newOrder);
-      saveLocalOrders(orders);
-
-      return {
-        success: true,
-        order_number: orderNum,
-        total_amount: newOrder.total_amount,
-        shipments: generatedShipments,
-        message: "Замовлення успішно створено!"
-      };
-    });
+    return orderResult;
   },
 
   async getOrders() {

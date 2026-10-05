@@ -559,7 +559,10 @@ export async function openCheckoutModal() {
     btn.disabled = true;
     btn.innerHTML = `<div class="spinner" style="width:18px; height:18px; border-width:2px;"></div> Оформлення замовлення...`;
 
+    const orderNum = `GK-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
+
     const orderPayload = {
+      order_number: orderNum,
       customer_name: document.getElementById('chk-name').value.trim(),
       customer_phone: document.getElementById('chk-phone').value.trim(),
       customer_email: document.getElementById('chk-email').value.trim(),
@@ -569,7 +572,22 @@ export async function openCheckoutModal() {
       delivery_type: selectedWarehouseCategory === 'Postomat' ? 'NOVA_POSHTA_POSTOMAT' : 'NOVA_POSHTA_WAREHOUSE',
       nova_poshta_ref: selectedWarehouseRef,
       payment_method: document.querySelector('input[name="payment_method"]:checked').value,
-      items: state.cart.map(i => ({ product_id: i.product_id || i.id, quantity: i.quantity }))
+      payment_status: 'PENDING_PAYMENT',
+      total_products_amount: total_products,
+      total_shipping_amount: total_shipping,
+      total_amount: grand_total,
+      shipments: shipments,
+      items: state.cart.map(i => ({
+        product_id: i.product_id || i.id,
+        id: i.product_id || i.id,
+        quantity: i.quantity,
+        price: i.price,
+        title: i.title,
+        title_uk: i.title,
+        sku: i.sku,
+        internal_sku: i.sku,
+        supplier_id: i.supplier_id
+      }))
     };
 
     try {

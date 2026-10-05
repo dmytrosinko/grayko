@@ -629,18 +629,37 @@ class GraykoStoreHandler(BaseHTTPRequestHandler):
         # 1. Group items by supplier for split shipments
         items_by_supplier = {}
         for it in items:
-            cursor.execute("SELECT * FROM products WHERE id = ?", (it['product_id'],))
+            p_id = it.get('product_id') or it.get('id')
+            cursor.execute("SELECT * FROM products WHERE id = ?", (p_id,))
             p = cursor.fetchone()
             if not p:
+                sup_id = int(it.get('supplier_id') or 1)
+                if sup_id not in items_by_supplier:
+                    items_by_supplier[sup_id] = []
+                price = float(it.get('price') or it.get('price_per_item') or 0.0)
+                cost = float(it.get('cost_price') or it.get('cost_price_per_item') or (price * 0.77))
+                items_by_supplier[sup_id].append({
+                    "product": {
+                        "id": p_id or 1,
+                        "title_uk": it.get('title') or it.get('title_uk') or it.get('product_title') or 'Товар',
+                        "internal_sku": it.get('sku') or it.get('internal_sku') or it.get('product_sku') or 'SKU-GEN',
+                        "price": price,
+                        "cost_price": cost
+                    },
+                    "quantity": max(1, int(it.get('quantity', 1))),
+                    "price": price,
+                    "cost_price": cost
+                })
                 continue
+
             sup_id = p['supplier_id']
             if sup_id not in items_by_supplier:
                 items_by_supplier[sup_id] = []
             items_by_supplier[sup_id].append({
-                "product": p,
+                "product": dict(p),
                 "quantity": max(1, int(it.get('quantity', 1))),
-                "price": p['price'],
-                "cost_price": p['cost_price']
+                "price": float(p['price']),
+                "cost_price": float(p['cost_price'])
             })
 
         total_products_amount = 0.0

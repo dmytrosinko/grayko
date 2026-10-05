@@ -1,4 +1,5 @@
 import os
+import sys
 import re
 import json
 import time
@@ -9,13 +10,21 @@ from datetime import datetime
 from db import get_db_connection
 from toysi_client import create_toysi_order
 
+if sys.platform == 'win32':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ENV_TELEGRAM_PATH = os.path.join(BASE_DIR, 'env', 'telegram')
+FRONTEND_JS_CONFIG_PATH = os.path.join(BASE_DIR, 'frontend', 'js', 'telegramConfig.js')
 
 def load_telegram_credentials():
-    """Reads bot token and chat_id from env/telegram."""
-    token = None
-    chat_id = None
+    """Reads bot token and chat_id from env/telegram or environment variables."""
+    token = os.environ.get('TELEGRAM_BOT_TOKEN')
+    chat_id = os.environ.get('TELEGRAM_CHAT_ID')
     if os.path.exists(ENV_TELEGRAM_PATH):
         try:
             with open(ENV_TELEGRAM_PATH, 'r', encoding='utf-8') as f:
@@ -30,6 +39,11 @@ def load_telegram_credentials():
     return token, chat_id
 
 BOT_TOKEN, ADMIN_CHAT_ID = load_telegram_credentials()
+
+def escape_html(text):
+    if text is None:
+        return ''
+    return str(text).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
 def clean_phone_international(phone_str):
     """Formats phone to +380XXXXXXXXX."""
@@ -46,8 +60,10 @@ def send_telegram_order(order, items):
     with direct client contact links and action buttons.
     """
     token, chat_id = load_telegram_credentials()
-    if not token or not chat_id:
-        print("Telegram credentials not configured. Skipping telegram notification.")
+    # Primary destination is the store's group (-5520817766)
+    target_chat_id = chat_id or "-5520817766"
+    if not token:
+        print("Telegram bot token not configured. Skipping telegram notification.")
         return False
 
     phone_clean = clean_phone_international(order.get('customer_phone', ''))
@@ -59,28 +75,45 @@ def send_telegram_order(order, items):
     items_text = []
     total_cost = 0.0
     for idx, it in enumerate(items, 1):
-        title = it.get('product_title') or it.get('title_uk') or 'Товар'
-        sku = it.get('product_sku') or it.get('internal_sku') or ''
-        qty = it.get('quantity', 1)
-        price = it.get('price_per_item') or it.get('price', 0.0)
-        cost = it.get('cost_price_per_item') or it.get('cost_price', price * 0.77)
-        total_cost += float(cost) * int(qty)
+        prod = it.get('product')
+        if prod is not None and not isinstance(prod, dict):
+            try:
+                prod = dict(prod)
+            except Exception:
+                prod = {}
+        elif prod is None:
+            prod = {}
+
+        raw_title = it.get('product_title') or it.get('title_uk') or it.get('title') or prod.get('title_uk') or prod.get('title') or 'Товар'
+        raw_sku = it.get('product_sku') or it.get('internal_sku') or it.get('sku') or prod.get('internal_sku') or prod.get('supplier_sku') or ''
+        title = escape_html(raw_title)
+        sku = escape_html(raw_sku)
+
+        qty = int(it.get('quantity') or 1)
+        price = float(it.get('price_per_item') or it.get('price') or prod.get('price') or 0.0)
+        cost = float(it.get('cost_price_per_item') or it.get('cost_price') or prod.get('cost_price') or (price * 0.77))
+        total_cost += cost * qty
 
         items_text.append(f"<b>{idx}. {title}</b>\n   └ Арт: <code>{sku}</code> | {qty} шт. × {price:.2f} грн")
 
     total_amount = float(order.get('total_amount', 0.0))
     profit = max(0.0, total_amount - total_cost)
 
+    safe_order_num = escape_html(order_num)
+    safe_name = escape_html(order.get('customer_name', 'Клієнт'))
+    safe_city = escape_html(order.get('delivery_city', '—'))
+    safe_wh = escape_html(order.get('delivery_warehouse', '—'))
+
     message_html = (
-        f"🔥 <b>НОВЕ ЗАМОВЛЕННЯ #{order_num}!</b>\n"
+        f"🔥 <b>НОВЕ ЗАМОВЛЕННЯ #{safe_order_num}!</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"👤 <b>Покупець:</b> {order.get('customer_name', 'Клієнт')}\n"
+        f"👤 <b>Покупець:</b> {safe_name}\n"
         f"📞 <b>Телефон:</b> <code>{phone_clean}</code>\n"
-        f"📍 <b>Доставка:</b> Нова Пошта, {order.get('delivery_city', '')}, {order.get('delivery_warehouse', '')}\n"
+        f"📍 <b>Доставка:</b> Нова Пошта, {safe_city}, {safe_wh}\n"
         f"💳 <b>Статус оплати:</b> ⏳ Очікує реквізитів та оплати\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"📦 <b>Склад замовлення:</b>\n"
-        + "\n".join(items_text) + "\n"
+        + ("\n".join(items_text) if items_text else "<i>Деталі товарів у системі</i>") + "\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"💰 <b>До сплати:</b> {total_amount:.2f} грн\n"
         f"🏷️ <b>Оптова вартість (Toysi):</b> {total_cost:.2f} грн\n"
@@ -90,25 +123,19 @@ def send_telegram_order(order, items):
     )
 
     # Inline Keyboard
-    keyboard = {
-        "inline_keyboard": [
-            [
-                {"text": "💬 Написати у Viber", "url": f"viber://chat?number=%2B{phone_digits}"},
-                {"text": "✈️ Написати у Telegram", "url": f"https://t.me/+{phone_digits}"}
-            ],
-            [
-                {"text": "✅ Оплачено — Замовити в Toysi", "callback_data": f"pay_{order_id}"}
-            ],
-            [
-                {"text": "🧪 Створити як Тест у Toysi", "callback_data": f"testpay_{order_id}"},
-                {"text": "❌ Скасувати", "callback_data": f"cancel_{order_id}"}
-            ]
-        ]
-    }
+    buttons = []
+    if len(phone_digits) >= 9:
+        buttons.append([{"text": "✈️ Написати клієнту в Telegram", "url": f"https://t.me/+{phone_digits}"}])
+    buttons.append([{"text": "✅ Оплачено — Замовити в Toysi", "callback_data": f"pay_{order_id}"}])
+    buttons.append([
+        {"text": "🧪 Створити як Тест у Toysi", "callback_data": f"testpay_{order_id}"},
+        {"text": "❌ Скасувати", "callback_data": f"cancel_{order_id}"}
+    ])
+    keyboard = {"inline_keyboard": buttons}
 
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = {
-        "chat_id": chat_id,
+        "chat_id": target_chat_id,
         "text": message_html,
         "parse_mode": "HTML",
         "reply_markup": json.dumps(keyboard)
@@ -119,9 +146,16 @@ def send_telegram_order(order, items):
         req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/x-www-form-urlencoded'})
         with urllib.request.urlopen(req, timeout=10) as resp:
             res_json = json.loads(resp.read().decode('utf-8'))
-            return res_json.get('ok', False)
+            ok = res_json.get('ok', False)
+            if ok:
+                print(f"✅ [Telegram] Order #{order_num} successfully sent to {target_chat_id}")
+            return ok
+    except urllib.error.HTTPError as e:
+        err_msg = e.read().decode('utf-8', errors='replace')
+        print(f"❌ Telegram API HTTPError {e.code}: {err_msg}")
+        return False
     except Exception as e:
-        print(f"Failed to send telegram notification: {e}")
+        print(f"❌ Failed to send telegram notification: {e}")
         return False
 
 def answer_callback_query(token, callback_id, text, show_alert=False):
@@ -258,9 +292,16 @@ def telegram_polling_loop():
                         from_user = msg.get('from', {}).get('first_name', '')
                         print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 📨 Telegram message from {from_user} (chat_id={c_id}): {text}")
 
-                        # Update env/telegram if chat_id differs
-                        with open(ENV_TELEGRAM_PATH, 'w', encoding='utf-8') as f:
-                            f.write(f"TELEGRAM_BOT_TOKEN: {token}\nTELEGRAM_CHAT_ID: {c_id}\n")
+                        # Update env/telegram and frontend/js/telegramConfig.js only if it's a group or if unset
+                        if c_id.startswith('-') or not os.path.exists(ENV_TELEGRAM_PATH):
+                            with open(ENV_TELEGRAM_PATH, 'w', encoding='utf-8') as f:
+                                f.write(f"TELEGRAM_BOT_TOKEN: {token}\nTELEGRAM_CHAT_ID: {c_id}\n")
+
+                            try:
+                                with open(FRONTEND_JS_CONFIG_PATH, 'w', encoding='utf-8') as f_js:
+                                    f_js.write(f'export const TELEGRAM_BOT_TOKEN = "{token}";\nexport const TELEGRAM_CHAT_ID = "{c_id}";\n')
+                            except Exception as ex:
+                                print(f"Could not update frontend telegramConfig.js: {ex}")
 
                         welcome = (
                             "👋 <b>Зв'язок з магазином GRAYKO успішно встановлено!</b>\n\n"

@@ -3,7 +3,19 @@
  * Sends order alerts directly to the store manager's Telegram bot (@grayko_admin_bot).
  */
 
-import { TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } from './telegramConfig.js';
+let cachedConfig = null;
+async function getTelegramConfig() {
+  if (cachedConfig) return cachedConfig;
+  let token = "";
+  let chatId = "";
+  try {
+    const mod = await import('./telegramConfig.js').catch(() => ({}));
+    token = mod.TELEGRAM_BOT_TOKEN || "";
+    chatId = mod.TELEGRAM_CHAT_ID || "";
+  } catch (e) {}
+  cachedConfig = { token, chatId };
+  return cachedConfig;
+}
 
 function cleanPhone(phone) {
   if (!phone) return '';
@@ -22,16 +34,14 @@ function escapeHtml(str) {
 }
 
 export async function sendTelegramOrderNotification(order, items = []) {
-  const token = TELEGRAM_BOT_TOKEN;
-  // Official Grayko orders group (-5520817766) is the primary destination
-  const primaryChatId = (typeof TELEGRAM_CHAT_ID !== 'undefined' && TELEGRAM_CHAT_ID && String(TELEGRAM_CHAT_ID).trim())
-    ? String(TELEGRAM_CHAT_ID).trim()
-    : "-5520817766";
+  const cfg = await getTelegramConfig();
+  const token = cfg.token || localStorage.getItem('grayko_telegram_bot_token') || '';
+  const primaryChatId = cfg.chatId || localStorage.getItem('grayko_telegram_chat_id') || '';
 
   const localChatId = localStorage.getItem('grayko_telegram_chat_id');
 
   if (!token || !primaryChatId) {
-    console.warn("⚠️ Telegram credentials not configured.");
+    // Client-side credentials not configured; server-side Netlify function handles dispatch
     return false;
   }
 

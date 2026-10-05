@@ -15,6 +15,10 @@ ENV/
 venv/
 */env/
 
+# Telegram credentials
+frontend/js/telegramConfig.js
+telegramConfig.js
+
 # IDE & OS
 .idea/
 .vscode/

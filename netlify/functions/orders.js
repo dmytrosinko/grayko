@@ -2,11 +2,14 @@
  * Netlify Serverless Function: /api/orders
  * 
  * Handles order submissions on Netlify production hosting.
- * Executes server-side in Node.js, completely immune to browser ad-blockers,
- * privacy shields (Brave/uBlock Origin), and client network throttling.
+ * Executes server-side in Node.js.
+ * Credentials are read safely from environment variables (Netlify dashboard)
+ * or local env/telegram file, never hardcoded in source control.
  */
 
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
 
 function escapeHtml(str) {
   if (str == null) return '';
@@ -22,6 +25,38 @@ function cleanPhone(phone) {
   if (digits.startsWith('380')) return `+${digits}`;
   if (digits.startsWith('0')) return `+38${digits}`;
   return `+${digits}`;
+}
+
+function getTelegramCredentials() {
+  let token = process.env.TELEGRAM_BOT_TOKEN;
+  let chatId = process.env.TELEGRAM_CHAT_ID;
+
+  if (!token || !chatId) {
+    const candidatePaths = [
+      path.join(__dirname, '..', '..', 'env', 'telegram'),
+      path.join(__dirname, '..', 'env', 'telegram'),
+      path.join(process.cwd(), 'env', 'telegram')
+    ];
+    for (const p of candidatePaths) {
+      if (fs.existsSync(p)) {
+        try {
+          const lines = fs.readFileSync(p, 'utf-8').split('\n');
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('TELEGRAM_BOT_TOKEN:')) {
+              token = token || trimmed.split(':', 2)[1].trim();
+            } else if (trimmed.startsWith('TELEGRAM_CHAT_ID:')) {
+              chatId = chatId || trimmed.split(':', 2)[1].trim();
+            }
+          }
+        } catch (e) {
+          console.warn('[Orders Function] Error reading env/telegram:', e.message);
+        }
+      }
+    }
+  }
+
+  return { token, chatId };
 }
 
 exports.handler = async (event, context) => {
@@ -45,8 +80,7 @@ exports.handler = async (event, context) => {
 
   try {
     const orderData = JSON.parse(event.body || '{}');
-    const token = process.env.TELEGRAM_BOT_TOKEN || "8920766538:AAHR6ytrX0-xF1Rg93TsVKXhkdhcoSLROJo";
-    const chatId = process.env.TELEGRAM_CHAT_ID || "-5520817766";
+    const { token, chatId } = getTelegramCredentials();
 
     const orderNum = orderData.order_number || `GK-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
     const phoneClean = cleanPhone(orderData.customer_phone || '');
@@ -108,48 +142,57 @@ exports.handler = async (event, context) => {
       { text: "📋 Відкрити панель Admin", url: "https://grayko.ua/admin" }
     ]);
 
-    const postData = JSON.stringify({
-      chat_id: chatId,
-      text: messageHtml,
-      parse_mode: 'HTML',
-      reply_markup: {
-        inline_keyboard: inlineKeyboard
-      }
-    });
+    let telegramSent = false;
 
-    // Send HTTP POST to Telegram Bot API server-side
-    await new Promise((resolve) => {
-      const req = https.request({
-        hostname: 'api.telegram.org',
-        path: `/bot${token}/sendMessage`,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(postData)
+    if (token && chatId) {
+      const postData = JSON.stringify({
+        chat_id: chatId,
+        text: messageHtml,
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: inlineKeyboard
         }
-      }, (res) => {
-        let data = '';
-        res.on('data', chunk => data += chunk);
-        res.on('end', () => {
-          console.log(`[Netlify Serverless] Telegram API response [${res.statusCode}]:`, data);
-          resolve(data);
+      });
+
+      await new Promise((resolve) => {
+        const req = https.request({
+          hostname: 'api.telegram.org',
+          path: `/bot${token}/sendMessage`,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(postData)
+          }
+        }, (res) => {
+          let data = '';
+          res.on('data', chunk => data += chunk);
+          res.on('end', () => {
+            console.log(`[Netlify Serverless] Telegram API response [${res.statusCode}]:`, data);
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.ok) telegramSent = true;
+            } catch (e) {}
+            resolve(data);
+          });
         });
-      });
 
-      req.on('error', (e) => {
-        console.error('[Netlify Serverless] Telegram request error:', e);
-        resolve(null);
-      });
+        req.on('error', (e) => {
+          console.error('[Netlify Serverless] Telegram request error:', e);
+          resolve(null);
+        });
 
-      req.setTimeout(8000, () => {
-        console.warn('[Netlify Serverless] Telegram request timed out');
-        req.destroy();
-        resolve(null);
-      });
+        req.setTimeout(8000, () => {
+          console.warn('[Netlify Serverless] Telegram request timed out');
+          req.destroy();
+          resolve(null);
+        });
 
-      req.write(postData);
-      req.end();
-    });
+        req.write(postData);
+        req.end();
+      });
+    } else {
+      console.warn('[Orders Function] Telegram token or chatId not configured. Skipping telegram send.');
+    }
 
     return {
       statusCode: 200,
@@ -158,7 +201,7 @@ exports.handler = async (event, context) => {
         success: true,
         order_number: orderNum,
         total_amount: totalAmount,
-        telegram_sent: true,
+        telegram_sent: telegramSent,
         message: "Замовлення успішно створено!"
       })
     };

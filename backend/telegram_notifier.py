@@ -60,8 +60,7 @@ def send_telegram_order(order, items):
     with direct client contact links and action buttons.
     """
     token, chat_id = load_telegram_credentials()
-    # Primary destination is the store's group (-5520817766)
-    target_chat_id = chat_id or "-5520817766"
+    target_chat_id = chat_id
     if not token:
         print("Telegram bot token not configured. Skipping telegram notification.")
         return False

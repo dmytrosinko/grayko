@@ -114,7 +114,7 @@ export async function sendTelegramOrderNotification(order, items = []) {
 
     const endpoint = `https://api.telegram.org/bot${token}/sendMessage`;
 
-    // 1. Primary delivery to store's Telegram group (-5520817766)
+    // 1. Primary delivery to store's Telegram group
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

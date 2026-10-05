@@ -1,1 +1,2 @@
-/admin    /admin.html    200
+/api/orders    /.netlify/functions/orders    200
+/admin         /admin.html                   200

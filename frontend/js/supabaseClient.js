@@ -289,11 +289,20 @@ export const supabaseClient = {
       fiscal_receipt_id: orderData.fiscal_receipt_id || null
     };
 
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify([orderPayload])
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2500);
+
+    let res;
+    try {
+      res = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify([orderPayload]),
+        signal: controller.signal
+      });
+    } finally {
+      clearTimeout(timer);
+    }
 
     if (!res.ok) {
       const errText = await res.text();

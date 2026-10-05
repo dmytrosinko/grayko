@@ -664,7 +664,9 @@ export const api = {
         total_amount: (orderResult && orderResult.total_amount) || orderData.total_amount,
         id: (orderResult && (orderResult.order_id || orderResult.id)) || 1
       };
-      await sendTelegramOrderNotification(mergedOrder, orderData.items || []);
+      if (!orderResult || !orderResult.telegram_sent) {
+        await sendTelegramOrderNotification(mergedOrder, orderData.items || []);
+      }
     } catch (e) {
       console.warn("Telegram notification dispatch error:", e);
     }

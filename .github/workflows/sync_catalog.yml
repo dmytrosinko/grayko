@@ -1,0 +1,77 @@
+name: 🔄 Sync Toysi Catalog Feed
+
+on:
+  schedule:
+    # 🌙 1 раз на добу (02:00 UTC = 05:00 Київ) — ПОВНА синхронізація (FULL)
+    # Оновлення категорій, фото, описів, додавання новинок та деактивація видалених товарів
+    - cron: '0 2 * * *'
+
+    # ⚡ Кожні 4 години вдень (06:00, 10:00, 14:00, 18:00, 22:00 UTC) — ШВИДКА синхронізація (FAST)
+    # Оновлення залишків, наявності та цін постачальника
+    - cron: '0 6,10,14,18,22 * * *'
+
+  workflow_dispatch:
+    inputs:
+      sync_type:
+        description: 'Тип синхронізації (FAST: ціни/залишки, FULL: все + деактивація видалених)'
+        required: true
+        default: 'FAST'
+        type: choice
+        options:
+          - 'FAST'
+          - 'FULL'
+      sync_supabase:
+        description: 'Завантажувати зміни в Supabase'
+        required: true
+        default: true
+        type: boolean
+
+concurrency:
+  group: sync-toysi-catalog
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync Toysi Feed & Update Catalog
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests urllib3
+
+      - name: 🔄 Execute catalog synchronization
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          # Автоматичне визначення типу синхронізації:
+          # Якщо запущено вручну — беремо вибір користувача.
+          # Якщо запуск о 02:00 UTC за розкладом — FULL.
+          # Якщо запуски кожні 4 години (06, 10, 14, 18, 22 UTC) — FAST.
+          if [ -n "${{ github.event.inputs.sync_type }}" ]; then
+            SYNC_TYPE="${{ github.event.inputs.sync_type }}"
+          elif [ "${{ github.event.schedule }}" = "0 2 * * *" ]; then
+            SYNC_TYPE="FULL"
+          else
+            SYNC_TYPE="FAST"
+          fi
+
+          EXTRA_FLAGS=""
+          if [ "${{ github.event.inputs.sync_supabase }}" = "false" ]; then
+            EXTRA_FLAGS="--skip-supabase"
+          fi
+
+          echo "🚀 Starting Toysi catalog sync with mode: $SYNC_TYPE"
+          python scripts/sync_catalog.py --type "$SYNC_TYPE" $EXTRA_FLAGS

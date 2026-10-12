@@ -974,10 +974,21 @@ def catalog_sync_scheduler():
         try:
             NEXT_SYNC_TIME = datetime.now() + timedelta(seconds=interval_seconds)
             time.sleep(interval_seconds)
-            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 🔄 Executing scheduled 4-hour catalog feed update...")
-            res = run_fast_sync(supplier_id=1)
+            
+            # 1 time per day at night (between 02:00 and 06:00): FULL sync (with deactivation of removed items)
+            # Other times: FAST sync (prices & stock quantities)
+            now_hour = datetime.now().hour
+            is_night_full_sync = (2 <= now_hour <= 5)
+            sync_mode = 'FULL' if is_night_full_sync else 'FAST'
+            
+            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 🔄 Executing scheduled {sync_mode} catalog feed update...")
+            if is_night_full_sync:
+                res = run_full_sync(supplier_id=1)
+            else:
+                res = run_fast_sync(supplier_id=1)
+                
             LAST_SYNC_RESULT = res
-            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ✅ 4-Hour catalog sync complete: {res.get('items_processed')} items processed, {res.get('items_updated')} updated, {res.get('items_added')} added.")
+            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ✅ {sync_mode} catalog sync complete: {res.get('items_processed')} items processed, {res.get('items_updated')} updated, {res.get('items_added')} added, {res.get('items_deactivated', 0)} deactivated.")
         except Exception as e:
             print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ❌ Scheduled catalog sync error: {e}")
             time.sleep(300)

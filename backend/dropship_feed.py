@@ -448,12 +448,15 @@ def sync_catalog_from_feed(sync_type='FAST', force_download=True):
     
     new_products_batch = []
     
+    feed_vendor_codes = set()
+
     for idx, o in enumerate(offers):
         oid = o.attrib.get('id', str(idx + 1))
         available = o.attrib.get('available', 'true')
         
         vendor_elem = o.find('vendorCode')
         vendor_code = (vendor_elem.text or oid).strip() if vendor_elem is not None else oid
+        feed_vendor_codes.add(vendor_code)
         
         price_elem = o.find('price')
         price = float(price_elem.text) if price_elem is not None and price_elem.text else 100.0
@@ -537,7 +540,24 @@ def sync_catalog_from_feed(sync_type='FAST', force_download=True):
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         """, new_products_batch)
 
-    log_details = f"Опрацьовано {items_processed} товарів. Оновлено залишків/цін: {items_updated}, додано нових: {items_added}, не в наявності: {out_of_stock_count}."
+    # 3. For FULL sync: handle removed/discontinued products (прибирання товарів)
+    # If a product is no longer present in the feed, mark it inactive and 0 stock.
+    items_deactivated = 0
+    if sync_type == 'FULL':
+        missing_skus = set(existing_products.keys()) - feed_vendor_codes
+        for sku in missing_skus:
+            curr = existing_products[sku]
+            if curr.get('is_active') != 0 or curr.get('stock_quantity', 0) != 0:
+                cursor.execute("""
+                UPDATE products SET
+                    is_active = 0,
+                    stock_quantity = 0,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """, (curr['id'],))
+                items_deactivated += 1
+
+    log_details = f"Опрацьовано {items_processed} товарів. Оновлено залишків/цін: {items_updated}, додано нових: {items_added}, прибрано/деактивовано: {items_deactivated}, не в наявності: {out_of_stock_count}."
     cursor.execute("""
     INSERT INTO feed_sync_logs (supplier_id, sync_type, status, items_processed, items_updated, items_added, rrp_violations_count, details)
     VALUES (?, ?, 'SUCCESS', ?, ?, ?, 0, ?)
@@ -562,6 +582,7 @@ def sync_catalog_from_feed(sync_type='FAST', force_download=True):
         "items_processed": items_processed,
         "items_updated": items_updated,
         "items_added": items_added,
+        "items_deactivated": items_deactivated,
         "out_of_stock": out_of_stock_count,
         "duration_seconds": round(elapsed, 2),
         "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),

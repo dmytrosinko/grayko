@@ -17,6 +17,7 @@ import {
 
 import { supabaseClient } from './supabaseClient.js';
 import { sendTelegramOrderNotification } from './telegramNotifier.js';
+import { state } from './state.js';
 
 // Local storage keys
 const STORAGE_KEY_PRODUCTS = 'grayko_products_db';
@@ -143,11 +144,14 @@ export const api = {
       if (params.category) {
         const catId = parseInt(params.category, 10);
         const allowedCatIds = new Set([catId]);
-        if (state.categories && state.categories.length) {
+        const categoriesList = (state?.categories && state.categories.length)
+          ? state.categories
+          : INITIAL_CATEGORIES;
+        if (categoriesList && categoriesList.length) {
           let added = true;
           while (added) {
             added = false;
-            for (const c of state.categories) {
+            for (const c of categoriesList) {
               if (c.parent_id && allowedCatIds.has(c.parent_id) && !allowedCatIds.has(c.id)) {
                 allowedCatIds.add(c.id);
                 added = true;
@@ -236,8 +240,13 @@ export const api = {
         if (p.price > maxP) maxP = p.price;
       });
 
+      const totalCount = products.length;
+      const limit = params.limit ? parseInt(params.limit, 10) : totalCount;
+      const offset = params.offset != null ? parseInt(params.offset, 10) : 0;
+      const paginatedProducts = params.limit ? products.slice(offset, offset + limit) : products;
+
       return {
-        products,
+        products: paginatedProducts,
         facets: {
           age_groups: Array.from(ageSet).sort(),
           materials: Array.from(matSet).sort(),
@@ -246,7 +255,10 @@ export const api = {
           min_price: minP === Infinity ? 0 : Math.floor(minP),
           max_price: maxP === -Infinity ? 2000 : Math.ceil(maxP)
         },
-        total: products.length
+        total: totalCount,
+        limit,
+        offset,
+        has_more: (offset + paginatedProducts.length) < totalCount
       };
     });
   },

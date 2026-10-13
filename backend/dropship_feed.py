@@ -327,7 +327,7 @@ def seed_database():
             
         desc_elem = o.find('description')
         desc_html = desc_elem.text if desc_elem is not None else ''
-        specs, brand, material, age_group = parse_description_metadata(desc_html, name_uk, category_id)
+        specs, brand, material, age_group = parse_description_metadata(desc_html, title_uk, category_id)
         
         # Extra tags
         is_bestseller = 1 if stock_qty > 20 and price < 1500 and idx % 7 == 0 else 0
@@ -337,7 +337,7 @@ def seed_database():
         skills = ["дрібна моторика", "уява", "просторове мислення"]
         
         # Difficulty level only for puzzles, constructors, 3D models and brainteasers
-        is_puzzle_or_const = any(k in (name_uk or '').lower() for k in ['пазл', 'конструктор', 'головоломк', '3d', 'збірн', 'моделюван', 'ugears', 'wood trick', 'lego'])
+        is_puzzle_or_const = any(k in (title_uk or '').lower() for k in ['пазл', 'конструктор', 'головоломк', '3d', 'збірн', 'моделюван', 'ugears', 'wood trick', 'lego'])
         item_difficulty = 'Середній' if is_puzzle_or_const else None
 
         product_rows.append((

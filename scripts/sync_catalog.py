@@ -55,16 +55,22 @@ def run_catalog_sync(sync_type='FAST', sync_supabase=True):
     conn.close()
 
     feed_result = {}
-    if existing_count == 0 or sync_type == 'FULL':
-        if existing_count == 0:
-            log("📦 Local database is empty. Running full initial database seed from Toysi XML feed...")
-            feed_result = seed_database()
+    try:
+        if existing_count == 0 or sync_type == 'FULL':
+            if existing_count == 0:
+                log("📦 Local database is empty. Running full initial database seed from Toysi XML feed...")
+                feed_result = seed_database()
+            else:
+                log("📦 Running FULL sync (categories, descriptions, images, prices, stock)...")
+                feed_result = sync_catalog_from_feed(sync_type='FULL', force_download=True)
         else:
-            log("📦 Running FULL sync (categories, descriptions, images, prices, stock)...")
-            feed_result = sync_catalog_from_feed(sync_type='FULL', force_download=True)
-    else:
-        log(f"📦 Database contains {existing_count} existing products. Running FAST sync (prices & stock)...")
-        feed_result = sync_catalog_from_feed(sync_type='FAST', force_download=True)
+            log(f"📦 Database contains {existing_count} existing products. Running FAST sync (prices & stock)...")
+            feed_result = sync_catalog_from_feed(sync_type='FAST', force_download=True)
+    except Exception as e:
+        import traceback
+        log(f"❌ Exception during catalog sync: {e}")
+        traceback.print_exc()
+        feed_result = {"success": False, "error": str(e)}
 
     if not feed_result.get('success'):
         log(f"❌ Feed sync error: {feed_result.get('error')}")

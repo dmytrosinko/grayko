@@ -539,12 +539,13 @@ export const api = {
       });
 
       items.forEach(cartItem => {
-        const prod = allProducts.find(p => p.id === cartItem.id);
-        const supplierId = prod?.supplier_id || 1;
+        const itemId = cartItem.product_id != null ? cartItem.product_id : cartItem.id;
+        const prod = allProducts.find(p => String(p.id) === String(itemId));
+        const supplierId = prod?.supplier_id || cartItem.supplier_id || 1;
         if (!supplierMap[supplierId]) {
           supplierMap[supplierId] = {
             id: supplierId,
-            name: prod?.supplier_name || "Склад",
+            name: prod?.supplier_name || cartItem.supplier_name || "Склад",
             warehouse_city: prod?.supplier_city || "Київ",
             packing_fee: 15.0,
             free_packing_threshold: 1000.0,
@@ -556,9 +557,10 @@ export const api = {
         const price = prod ? prod.price : (cartItem.price || 0);
         const itemTotal = price * cartItem.quantity;
         supplierMap[supplierId].items.push({
-          product_id: cartItem.id,
-          title: prod ? prod.title_uk : cartItem.title,
-          sku: prod ? prod.internal_sku : "SKU",
+          id: itemId,
+          product_id: itemId,
+          title: prod ? prod.title_uk : (cartItem.title || cartItem.title_uk || "Товар"),
+          sku: prod ? prod.internal_sku : (cartItem.sku || cartItem.internal_sku || "SKU"),
           price: price,
           quantity: cartItem.quantity,
           image: prod?.images?.[0] || cartItem.image

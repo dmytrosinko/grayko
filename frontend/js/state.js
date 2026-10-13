@@ -29,7 +29,15 @@ class AppState {
 
   loadCart() {
     try {
-      return JSON.parse(localStorage.getItem('grayko_cart') || '[]');
+      const items = JSON.parse(localStorage.getItem('grayko_cart') || '[]');
+      return items.map(item => {
+        const id = item.product_id != null ? item.product_id : item.id;
+        return {
+          ...item,
+          id: id,
+          product_id: id
+        };
+      });
     } catch {
       return [];
     }
@@ -41,39 +49,41 @@ class AppState {
   }
 
   addToCart(product, quantity = 1) {
-    const existing = this.cart.find(item => item.product_id === product.id);
+    const prodId = product.id != null ? product.id : product.product_id;
+    const existing = this.cart.find(item => String(item.product_id || item.id) === String(prodId));
     if (existing) {
       existing.quantity += quantity;
     } else {
       this.cart.push({
-        product_id: product.id,
-        sku: product.internal_sku,
-        title: product.title_uk,
+        id: prodId,
+        product_id: prodId,
+        sku: product.internal_sku || product.sku || 'SKU',
+        title: product.title_uk || product.title || 'Товар',
         price: product.price,
-        image: Array.isArray(product.images) && product.images.length ? product.images[0] : '',
+        image: Array.isArray(product.images) && product.images.length ? product.images[0] : (product.image || ''),
         supplier_id: product.supplier_id,
         supplier_name: product.supplier_name,
         quantity: quantity
       });
     }
     this.saveCart();
-    this.showToast(`Додано в кошик: ${product.title_uk}`);
+    this.showToast(`Додано в кошик: ${product.title_uk || product.title}`);
   }
 
   updateCartQty(productId, delta) {
-    const item = this.cart.find(i => i.product_id === productId);
+    const item = this.cart.find(i => String(i.product_id || i.id) === String(productId));
     if (!item) return;
     item.quantity += delta;
     if (item.quantity <= 0) {
-      this.cart = this.cart.filter(i => i.product_id !== productId);
+      this.cart = this.cart.filter(i => String(i.product_id || i.id) !== String(productId));
       this.showToast(`Видалено з кошика: ${item.title}`);
     }
     this.saveCart();
   }
 
   removeFromCart(productId) {
-    const item = this.cart.find(i => i.product_id === productId);
-    this.cart = this.cart.filter(i => i.product_id !== productId);
+    const item = this.cart.find(i => String(i.product_id || i.id) === String(productId));
+    this.cart = this.cart.filter(i => String(i.product_id || i.id) !== String(productId));
     this.saveCart();
     if (item) {
       this.showToast(`Видалено з кошика: ${item.title}`);

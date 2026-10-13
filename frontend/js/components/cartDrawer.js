@@ -80,11 +80,11 @@ export async function renderCartDrawer() {
                   </div>
                   <div class="cart-item-actions">
                     <div class="qty-control">
-                      <button class="qty-btn" onclick="window.app.updateCartQty(${it.product_id}, -1)" title="Зменшити кількість">-</button>
+                      <button class="qty-btn" onclick="window.app.updateCartQty('${it.product_id != null ? it.product_id : it.id}', -1)" title="Зменшити кількість">-</button>
                       <span class="qty-val">${it.quantity}</span>
-                      <button class="qty-btn" onclick="window.app.updateCartQty(${it.product_id}, 1)" title="Збільшити кількість">+</button>
+                      <button class="qty-btn" onclick="window.app.updateCartQty('${it.product_id != null ? it.product_id : it.id}', 1)" title="Збільшити кількість">+</button>
                     </div>
-                    <button class="btn-remove-item" onclick="window.app.removeFromCart(${it.product_id})" title="Видалити цей товар з кошика" aria-label="Видалити товар">
+                    <button class="btn-remove-item" onclick="window.app.removeFromCart('${it.product_id != null ? it.product_id : it.id}')" title="Видалити цей товар з кошика" aria-label="Видалити товар">
                       🗑️
                     </button>
                   </div>

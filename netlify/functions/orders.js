@@ -35,7 +35,8 @@ function getTelegramCredentials() {
     const candidatePaths = [
       path.join(__dirname, '..', '..', 'env', 'telegram'),
       path.join(__dirname, '..', 'env', 'telegram'),
-      path.join(process.cwd(), 'env', 'telegram')
+      path.join(process.cwd(), 'env', 'telegram'),
+      path.join(process.cwd(), '..', 'env', 'telegram')
     ];
     for (const p of candidatePaths) {
       if (fs.existsSync(p)) {
@@ -43,10 +44,16 @@ function getTelegramCredentials() {
           const lines = fs.readFileSync(p, 'utf-8').split('\n');
           for (const line of lines) {
             const trimmed = line.trim();
-            if (trimmed.startsWith('TELEGRAM_BOT_TOKEN:')) {
-              token = token || trimmed.split(':', 2)[1].trim();
-            } else if (trimmed.startsWith('TELEGRAM_CHAT_ID:')) {
-              chatId = chatId || trimmed.split(':', 2)[1].trim();
+            if (trimmed.startsWith('TELEGRAM_BOT_TOKEN')) {
+              const delimIdx = trimmed.indexOf(':') !== -1 ? trimmed.indexOf(':') : trimmed.indexOf('=');
+              if (delimIdx !== -1) {
+                token = token || trimmed.slice(delimIdx + 1).trim();
+              }
+            } else if (trimmed.startsWith('TELEGRAM_CHAT_ID')) {
+              const delimIdx = trimmed.indexOf(':') !== -1 ? trimmed.indexOf(':') : trimmed.indexOf('=');
+              if (delimIdx !== -1) {
+                chatId = chatId || trimmed.slice(delimIdx + 1).trim();
+              }
             }
           }
         } catch (e) {

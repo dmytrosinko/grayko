@@ -616,14 +616,22 @@ export const api = {
       }
     }
 
+    let serverNotifyResult = null;
+    const notifyPayload = {
+      ...orderData,
+      order_number: (orderResult && orderResult.order_number) || orderData.order_number,
+      total_amount: (orderResult && orderResult.total_amount) || orderData.total_amount,
+      id: (orderResult && (orderResult.order_id || orderResult.id)) || undefined
+    };
+
     if (!orderResult) {
       orderResult = await safeFetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
+        body: JSON.stringify(notifyPayload)
       }, () => {
         const orders = getLocalOrders();
-        const orderNum = orderData.order_number || `GK-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
+        const orderNum = notifyPayload.order_number || `GK-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
         const now = new Date();
         const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
@@ -668,9 +676,24 @@ export const api = {
           message: "Замовлення успішно створено!"
         };
       });
+      serverNotifyResult = orderResult;
+    } else {
+      // Supabase saved the order; dispatch to Netlify serverless function for server-side Telegram alert
+      try {
+        const res = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(notifyPayload)
+        });
+        if (res.ok) {
+          serverNotifyResult = await res.json();
+        }
+      } catch (err) {
+        console.warn("Could not dispatch to /api/orders serverless endpoint:", err);
+      }
     }
 
-    // Always dispatch Telegram bot notification for real-time manager alerts
+    // Always dispatch Telegram bot notification for real-time manager alerts (fallback if serverless didn't send)
     try {
       const mergedOrder = {
         ...orderData,
@@ -678,7 +701,7 @@ export const api = {
         total_amount: (orderResult && orderResult.total_amount) || orderData.total_amount,
         id: (orderResult && (orderResult.order_id || orderResult.id)) || 1
       };
-      if (!orderResult || !orderResult.telegram_sent) {
+      if (!serverNotifyResult || !serverNotifyResult.telegram_sent) {
         await sendTelegramOrderNotification(mergedOrder, orderData.items || []);
       }
     } catch (e) {

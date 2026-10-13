@@ -41,7 +41,23 @@ export async function sendTelegramOrderNotification(order, items = []) {
   const localChatId = localStorage.getItem('grayko_telegram_chat_id');
 
   if (!token || !primaryChatId) {
-    // Client-side credentials not configured; server-side Netlify function handles dispatch
+    // Client-side credentials not configured; dispatch via Netlify serverless function
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...order,
+          items: items.length ? items : (order.items || [])
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return !!data.telegram_sent;
+      }
+    } catch (e) {
+      console.warn('[Telegram Notifier] Serverless dispatch error:', e);
+    }
     return false;
   }
 

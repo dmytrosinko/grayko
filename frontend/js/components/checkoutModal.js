@@ -10,6 +10,16 @@ const POPULAR_CITIES = [
   { name: 'Запоріжжя', ref: 'db5c88c6-391c-11dd-90d9-001a92567626', present: 'м. Запоріжжя, Запорізька обл.' }
 ];
 
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export async function openCheckoutModal() {
   const modalContainer = document.getElementById('checkout-modal');
   const backdrop = document.getElementById('modal-backdrop');
@@ -246,7 +256,7 @@ export async function openCheckoutModal() {
       return;
     }
 
-    const isPostomat = wh.category === 'Postomat';
+    const isPostomat = wh.category === 'Postomat' || (wh.description && wh.description.toLowerCase().includes('поштомат'));
     const icon = isPostomat ? '📦' : '🏢';
     const maxWeightText = wh.maxWeight ? `(до ${wh.maxWeight} кг)` : '';
 
@@ -256,9 +266,9 @@ export async function openCheckoutModal() {
         <div style="display: flex; gap: 10px; align-items: flex-start;">
           <span style="font-size: 20px; line-height: 1;">${icon}</span>
           <div>
-            <div class="np-selected-badge-title">${wh.description}</div>
+            <div class="np-selected-badge-title">${escapeHtml(wh.description)}</div>
             <div class="np-selected-badge-desc">
-              ${wh.shortAddress ? wh.shortAddress + ' ' : ''}${maxWeightText}
+              ${wh.shortAddress ? escapeHtml(wh.shortAddress) + ' ' : ''}${maxWeightText}
             </div>
           </div>
         </div>
@@ -314,8 +324,9 @@ export async function openCheckoutModal() {
       <select id="chk-warehouse" class="np-wh-select">
         <option value="">-- Оберіть відділення або поштомат (${filteredWarehouses.length}) --</option>
         ${filteredWarehouses.map(w => {
-          const isSelected = selectedWarehouse === w.description ? 'selected' : '';
-          return `<option value="${w.description}" ${isSelected}>${w.description}</option>`;
+          const isSelected = (selectedWarehouseRef && w.ref === selectedWarehouseRef) || selectedWarehouse === w.description ? 'selected' : '';
+          const optVal = w.ref || w.description;
+          return `<option value="${escapeHtml(optVal)}" ${isSelected}>${escapeHtml(w.description)}</option>`;
         }).join('')}
       </select>
     `;
@@ -323,11 +334,11 @@ export async function openCheckoutModal() {
     const whSelect = document.getElementById('chk-warehouse');
     whSelect.addEventListener('change', (e) => {
       const val = e.target.value;
-      const found = filteredWarehouses.find(w => w.description === val);
+      const found = filteredWarehouses.find(w => (w.ref && w.ref === val) || w.description === val);
       if (found) {
         selectedWarehouse = found.description;
         selectedWarehouseRef = found.ref;
-        selectedWarehouseCategory = found.category;
+        selectedWarehouseCategory = found.category || (found.description.toLowerCase().includes('поштомат') ? 'Postomat' : 'Branch');
         renderSelectedWarehouseBadge(found);
       } else {
         selectedWarehouse = '';
@@ -337,9 +348,12 @@ export async function openCheckoutModal() {
     });
 
     // If previously selected warehouse is in this filtered list, keep badge visible
-    const existing = filteredWarehouses.find(w => w.description === selectedWarehouse);
+    const existing = filteredWarehouses.find(w => (selectedWarehouseRef && w.ref === selectedWarehouseRef) || w.description === selectedWarehouse);
     if (existing) {
-      whSelect.value = existing.description;
+      whSelect.value = existing.ref || existing.description;
+      selectedWarehouse = existing.description;
+      selectedWarehouseRef = existing.ref;
+      selectedWarehouseCategory = existing.category || (existing.description.toLowerCase().includes('поштомат') ? 'Postomat' : 'Branch');
       renderSelectedWarehouseBadge(existing);
     } else {
       renderSelectedWarehouseBadge(null);
@@ -548,9 +562,27 @@ export async function openCheckoutModal() {
       return;
     }
 
+    // Safety fallback: inspect the select element directly if selectedWarehouse wasn't populated
+    const whSelect = document.getElementById('chk-warehouse');
+    if (!selectedWarehouse && whSelect && whSelect.value) {
+      const val = whSelect.value;
+      const found = allWarehouses.find(w => (w.ref && w.ref === val) || w.description === val);
+      if (found) {
+        selectedWarehouse = found.description;
+        selectedWarehouseRef = found.ref;
+        selectedWarehouseCategory = found.category || (found.description.toLowerCase().includes('поштомат') ? 'Postomat' : 'Branch');
+      } else if (whSelect.selectedIndex > 0) {
+        const opt = whSelect.options[whSelect.selectedIndex];
+        if (opt && opt.text && !opt.text.startsWith('--')) {
+          selectedWarehouse = opt.text;
+          selectedWarehouseRef = opt.value;
+          selectedWarehouseCategory = opt.text.toLowerCase().includes('поштомат') ? 'Postomat' : 'Branch';
+        }
+      }
+    }
+
     if (!selectedWarehouse) {
       alert("Будь ласка, оберіть відділення або поштомат Нової Пошти зі списку.");
-      const whSelect = document.getElementById('chk-warehouse');
       if (whSelect) whSelect.focus();
       return;
     }

@@ -676,36 +676,34 @@ export const api = {
           message: "Замовлення успішно створено!"
         };
       });
-      serverNotifyResult = orderResult;
-    } else {
-      // Supabase saved the order; dispatch to Netlify serverless function for server-side Telegram alert
-      try {
-        const res = await fetch('/api/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(notifyPayload)
-        });
-        if (res.ok) {
-          serverNotifyResult = await res.json();
-        }
-      } catch (err) {
-        console.warn("Could not dispatch to /api/orders serverless endpoint:", err);
-      }
-    }
 
-    // Always dispatch Telegram bot notification for real-time manager alerts (fallback if serverless didn't send)
-    try {
-      const mergedOrder = {
-        ...orderData,
-        order_number: (orderResult && orderResult.order_number) || orderData.order_number,
-        total_amount: (orderResult && orderResult.total_amount) || orderData.total_amount,
-        id: (orderResult && (orderResult.order_id || orderResult.id)) || 1
-      };
-      if (!serverNotifyResult || !serverNotifyResult.telegram_sent) {
-        await sendTelegramOrderNotification(mergedOrder, orderData.items || []);
-      }
-    } catch (e) {
-      console.warn("Telegram notification dispatch error:", e);
+      // Background notification for local fallback
+      (async () => {
+        try {
+          await sendTelegramOrderNotification(notifyPayload, orderData.items || []);
+        } catch (e) {}
+      })();
+    } else {
+      // Order is already saved in Supabase!
+      // Run Telegram notification in the background without blocking the UI
+      (async () => {
+        try {
+          const res = await fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(notifyPayload)
+          });
+          const data = res.ok ? await res.json() : null;
+          if (!data || !data.telegram_sent) {
+            await sendTelegramOrderNotification(notifyPayload, orderData.items || []);
+          }
+        } catch (err) {
+          console.warn("Background /api/orders dispatch notice:", err);
+          try {
+            await sendTelegramOrderNotification(notifyPayload, orderData.items || []);
+          } catch (e) {}
+        }
+      })();
     }
 
     return orderResult;
